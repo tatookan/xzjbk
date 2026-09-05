@@ -12,7 +12,7 @@ const links = [
 
 export function LibraryHeader() {
   const pathname = usePathname();
-  const { role, currentUser, logout } = useScriptLibraryDemo();
+  const { role, authPending, currentUser, logout } = useScriptLibraryDemo();
 
   return (
     <header className='sticky top-0 z-40 border-b border-white/10 bg-[#0d0e11]/88 text-[#f3efe7] backdrop-blur-xl'>
@@ -56,7 +56,9 @@ export function LibraryHeader() {
         </div>
 
         <div className='flex shrink-0 items-center gap-3'>
-          {role === 'member' && currentUser ? (
+          {authPending ? (
+            <span className='h-9 w-24 animate-pulse rounded-full bg-white/8' />
+          ) : role === 'member' && currentUser ? (
             <Link
               href='/account'
               className='hidden text-xs tabular-nums text-white/62 transition-colors hover:text-white sm:block'
@@ -76,7 +78,7 @@ export function LibraryHeader() {
               type='button'
               onClick={logout}
               className='grid size-9 place-items-center rounded-full border border-white/18 text-white/62 transition-colors hover:border-white/45 hover:text-white'
-              aria-label='退出演示账号'
+              aria-label='退出账号'
             >
               <Icons.logout size={16} />
             </button>

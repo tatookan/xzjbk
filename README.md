@@ -27,8 +27,11 @@ npm install --legacy-peer-deps
 cp env.example.txt .env.local
 docker compose up -d database
 npm run db:migrate
+npm run auth:bootstrap-admin
 npm run dev
 ```
+
+首次启动前，在 `.env.local` 配置 `BETTER_AUTH_SECRET`、`INVITE_CODE_PEPPER` 和三个 `INITIAL_ADMIN_*` 变量，然后执行一次管理员初始化命令。管理员创建成功后，应从运行环境删除 `INITIAL_ADMIN_PASSWORD`。
 
 访问 `http://localhost:3000`。
 
@@ -85,6 +88,8 @@ src/
 - 所有外部客户端使用 `/api/v1`；路由只做输入输出转换，业务规则进入领域服务。
 - 数据库只允许服务端模块访问，结构变化统一记录在 `drizzle/` 迁移目录。
 - 管理端和用户端最终必须由服务端鉴权与权限校验，不能依赖前端隐藏按钮。
+- 门户 `/` 和剧本库首页 `/scripts` 始终公开；个人中心和管理后台由服务端会话保护。
+- 邮箱注册只允许通过管理员生成的一次性注册码，完整注册码不写入数据库，后台刷新后不再回显。
 - 剧本试读接口只返回允许展示的片段，完整文件不得进入浏览器响应。
 - 文件通过 `StorageProvider` 操作，业务表只保存 provider 与 object key，不保存磁盘绝对路径。
 

@@ -1,41 +1,71 @@
 'use client';
 
 import { Icons } from '@/components/icons';
-import { useScriptLibraryDemo } from '@/features/script-library/components/demo-context';
+import { authClient } from '@/modules/identity/auth-client';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { FormEvent, useState } from 'react';
+import type { FormEvent } from 'react';
+import { useState } from 'react';
 
 type Mode = 'login' | 'register';
 
 export function LoginScreen() {
   const router = useRouter();
-  const { loginAs, register } = useScriptLibraryDemo();
   const [mode, setMode] = useState<Mode>('login');
   const [message, setMessage] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setMessage('');
-    if (mode === 'login') {
-      loginAs('member');
-      router.push('/scripts');
-      return;
-    }
+    setSubmitting(true);
 
     const formData = new FormData(event.currentTarget);
-    const result = register(String(formData.get('inviteCode') ?? ''));
-    if (!result.ok) {
-      setMessage(result.message);
-      return;
-    }
-    router.push('/scripts');
-  };
+    const email = String(formData.get('email') ?? '')
+      .trim()
+      .toLowerCase();
+    const password = String(formData.get('password') ?? '');
 
-  const enterAdmin = () => {
-    loginAs('admin');
-    router.push('/admin');
+    try {
+      if (mode === 'register') {
+        const response = await fetch('/api/v1/auth/register', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            name: String(formData.get('name') ?? ''),
+            email,
+            password,
+            inviteCode: String(formData.get('inviteCode') ?? '')
+          })
+        });
+        const payload = (await response.json()) as {
+          success: boolean;
+          error?: { message?: string };
+        };
+        if (!response.ok || !payload.success) {
+          setMessage(payload.error?.message ?? '注册失败，请稍后重试');
+          return;
+        }
+      }
+
+      const result = await authClient.signIn.email({ email, password });
+      if (result.error) {
+        setMessage(
+          mode === 'register'
+            ? '账号已创建，但自动登录失败，请切换到账号登录重试'
+            : '邮箱或密码不正确'
+        );
+        return;
+      }
+
+      router.replace(result.data?.user.role === 'admin' ? '/admin' : '/scripts');
+      router.refresh();
+    } catch {
+      setMessage('当前无法连接登录服务，请稍后重试');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -108,13 +138,26 @@ export function LoginScreen() {
           </div>
 
           <form onSubmit={handleSubmit} className='mt-7 space-y-5'>
+            {mode === 'register' ? (
+              <label className='block text-sm text-white/66'>
+                姓名或称呼
+                <input
+                  name='name'
+                  autoComplete='name'
+                  minLength={2}
+                  maxLength={50}
+                  required
+                  className='mt-2 h-12 w-full border border-white/14 bg-white/[0.035] px-4 text-white outline-none transition-colors focus:border-[#d84a3f]'
+                />
+              </label>
+            ) : null}
             <label className='block text-sm text-white/66'>
               邮箱
               <input
                 name='email'
                 type='email'
+                autoComplete='email'
                 required
-                defaultValue='shen@xinzhi.demo'
                 className='mt-2 h-12 w-full border border-white/14 bg-white/[0.035] px-4 text-white outline-none transition-colors focus:border-[#d84a3f]'
               />
             </label>
@@ -123,8 +166,10 @@ export function LoginScreen() {
               <input
                 name='password'
                 type='password'
+                autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+                minLength={8}
+                maxLength={128}
                 required
-                defaultValue='demo123456'
                 className='mt-2 h-12 w-full border border-white/14 bg-white/[0.035] px-4 text-white outline-none transition-colors focus:border-[#d84a3f]'
               />
             </label>
@@ -133,40 +178,39 @@ export function LoginScreen() {
                 注册码
                 <input
                   name='inviteCode'
+                  autoComplete='off'
+                  minLength={12}
+                  maxLength={64}
                   required
-                  defaultValue='XINZHI-2026'
                   className='mt-2 h-12 w-full border border-white/14 bg-white/[0.035] px-4 font-mono text-white uppercase outline-none transition-colors focus:border-[#d84a3f]'
                 />
-                <span className='mt-2 block text-xs text-white/35'>演示注册码：XINZHI-2026</span>
+                <span className='mt-2 block text-xs leading-5 text-white/35'>
+                  每个注册码仅可绑定一个账号，使用后立即失效。
+                </span>
               </label>
             ) : null}
 
             {message ? (
-              <p className='flex items-center gap-2 text-sm text-[#ff8075]'>
+              <p role='alert' className='flex items-center gap-2 text-sm text-[#ff8075]'>
                 <Icons.alertCircle size={16} /> {message}
               </p>
             ) : null}
 
             <button
               type='submit'
-              className='flex h-12 w-full items-center justify-center gap-2 bg-[#d84a3f] text-sm font-semibold text-[#130f0f] transition-colors hover:bg-[#e05d52]'
+              disabled={submitting}
+              className='flex h-12 w-full items-center justify-center gap-2 bg-[#d84a3f] text-sm font-semibold text-[#130f0f] transition-colors hover:bg-[#e05d52] disabled:cursor-wait disabled:opacity-55'
             >
-              {mode === 'login' ? '登录剧本库' : '验证并注册'}
+              {submitting
+                ? mode === 'login'
+                  ? '正在登录…'
+                  : '正在验证…'
+                : mode === 'login'
+                  ? '登录剧本库'
+                  : '验证并注册'}
               <Icons.arrowRight size={17} />
             </button>
           </form>
-
-          <div className='mt-8 border-t border-white/10 pt-6'>
-            <p className='mb-3 text-xs text-white/34'>UI 验证快捷入口</p>
-            <button
-              type='button'
-              onClick={enterAdmin}
-              className='flex w-full items-center justify-between border border-white/12 px-4 py-3 text-sm text-white/65 transition-colors hover:border-white/32 hover:text-white'
-            >
-              以管理员身份进入后台
-              <Icons.chevronRight size={16} />
-            </button>
-          </div>
         </div>
       </section>
     </main>

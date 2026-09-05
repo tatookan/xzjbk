@@ -172,10 +172,16 @@ function DeliveryManifest({ script, purchased }: { script: DemoScript; purchased
 
 export function ScriptDetail() {
   const params = useParams<{ id: string }>();
-  const { role, currentUser, scripts, purchasedIds, purchaseScript } = useScriptLibraryDemo();
+  const { role, authPending, currentUser, scripts, purchasedIds, purchaseScript } =
+    useScriptLibraryDemo();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [readerMode, setReaderMode] = useState<ReaderMode>('bilingual');
   const [directorSectionId, setDirectorSectionId] = useState('concept');
+
+  if (authPending) {
+    return <main className='min-h-screen bg-[#0c0d10]' />;
+  }
+
   const script = scripts.find((item) => item.id === params.id);
 
   if (!script)

@@ -1,4 +1,4 @@
-import type { DemoInvite, DemoOrder, DemoRecharge, DemoScript, DemoUser } from './types';
+import type { DemoOrder, DemoRecharge, DemoScript, DemoUser } from './types';
 
 export const initialScripts: DemoScript[] = [
   {
@@ -499,17 +499,6 @@ export const initialUsers: DemoUser[] = [
     points: 0,
     discount: 100,
     role: 'admin'
-  }
-];
-
-export const initialInvites: DemoInvite[] = [
-  { id: 'invite-1', code: 'XZ-2A7KQ8', status: 'unused', createdAt: '2026-09-04' },
-  {
-    id: 'invite-2',
-    code: 'XZ-8M4RTP',
-    status: 'used',
-    createdAt: '2026-09-02',
-    usedBy: '宋知遥'
   }
 ];
 

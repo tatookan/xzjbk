@@ -10,6 +10,7 @@
     "db:migrate": "drizzle-kit migrate",
     "db:check": "drizzle-kit check",
     "db:studio": "drizzle-kit studio",
+    "auth:bootstrap-admin": "tsx scripts/bootstrap-admin.ts",
     "typecheck": "tsc --noEmit",
     "lint": "oxlint",
     "lint:fix": "oxlint --fix && npm run format",
@@ -20,6 +21,7 @@
   },
   "dependencies": {
     "@tabler/icons-react": "^3.40.0",
+    "better-auth": "^1.7.2",
     "clsx": "^2.1.1",
     "drizzle-orm": "^0.45.2",
     "next": "16.2.12",
@@ -45,6 +47,7 @@
     "oxlint": "^1.57.0",
     "postcss": "8.5.25",
     "tailwindcss": "^4.2.2",
+    "tsx": "^4.23.13",
     "typescript": "5.7.2"
   },
   "overrides": {

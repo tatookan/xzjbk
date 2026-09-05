@@ -10,10 +10,22 @@ import { ScriptEditor } from '@/features/script-library/components/script-editor
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
 import Link from 'next/link';
-import { FormEvent, useState } from 'react';
+import type { FormEvent } from 'react';
+import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
 type AdminSection = 'overview' | 'scripts' | 'users' | 'invites' | 'orders' | 'recharges';
+
+interface AdminInvite {
+  id: string;
+  status: 'unused' | 'used' | 'revoked';
+  codeHint: string;
+  code?: string;
+  createdAt: string;
+  usedAt: string | null;
+  usedByName: string | null;
+  usedByEmail: string | null;
+}
 
 const navItems: { id: AdminSection; label: string; icon: Icon }[] = [
   { id: 'overview', label: '经营概览', icon: Icons.dashboard },
@@ -84,16 +96,14 @@ function SectionHeading({
 export function AdminDashboard() {
   const {
     role,
-    loginAs,
+    authPending,
     logout,
     scripts,
     users,
-    invites,
     orders,
     recharges,
     adjustPoints,
     setUserDiscount,
-    generateInvite,
     syncRecharge,
     deleteScript
   } = useScriptLibraryDemo();
@@ -105,6 +115,45 @@ export function AdminDashboard() {
   const [editingUser, setEditingUser] = useState<DemoUser | null>(null);
   const [scriptQuery, setScriptQuery] = useState('');
   const [scriptStatus, setScriptStatus] = useState<'all' | DemoScript['status']>('all');
+  const [invites, setInvites] = useState<AdminInvite[]>([]);
+  const [invitesLoading, setInvitesLoading] = useState(true);
+  const [creatingInvite, setCreatingInvite] = useState(false);
+
+  useEffect(() => {
+    if (role !== 'admin') return;
+
+    const controller = new AbortController();
+    fetch('/api/v1/admin/invite-codes', { signal: controller.signal })
+      .then(async (response) => {
+        const payload = (await response.json()) as {
+          success: boolean;
+          data?: { items: AdminInvite[] };
+        };
+        if (response.ok && payload.success && payload.data) {
+          setInvites(payload.data.items);
+        }
+      })
+      .catch((error: unknown) => {
+        if (!(error instanceof DOMException && error.name === 'AbortError')) {
+          toast.error('注册码列表读取失败');
+        }
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setInvitesLoading(false);
+      });
+
+    return () => controller.abort();
+  }, [role]);
+
+  if (authPending) {
+    return (
+      <main className='grid min-h-screen place-items-center bg-[#0c0d10] text-[#f4f0e8]'>
+        <div className='h-px w-32 overflow-hidden bg-white/10'>
+          <div className='h-full w-1/2 animate-pulse bg-[#d84a3f]' />
+        </div>
+      </main>
+    );
+  }
 
   if (role !== 'admin') {
     return (
@@ -115,15 +164,14 @@ export function AdminDashboard() {
           </span>
           <h1 className='mt-6 font-serif text-5xl tracking-[-0.05em]'>管理员后台</h1>
           <p className='mt-4 text-sm leading-7 text-white/46'>
-            此区域仅管理员可访问。为了方便你评审 UI，可以直接进入管理员演示状态。
+            此区域仅管理员账号可以访问。请使用已经完成初始化的管理员邮箱和密码登录。
           </p>
-          <button
-            type='button'
-            onClick={() => loginAs('admin')}
+          <Link
+            href='/login'
             className='mt-8 inline-flex items-center gap-2 bg-[#d84a3f] px-5 py-3 text-sm font-semibold text-[#130f0f]'
           >
-            进入管理员演示 <Icons.arrowRight size={17} />
-          </button>
+            登录管理员账号 <Icons.arrowRight size={17} />
+          </Link>
           <Link href='/scripts' className='mt-5 block text-sm text-white/38'>
             返回剧本库
           </Link>
@@ -159,9 +207,50 @@ export function AdminDashboard() {
     toast.success('用户积分和折扣已更新');
   };
 
-  const createInvite = () => {
-    const code = generateInvite();
-    toast.success(`注册码 ${code} 已生成`);
+  const createInvite = async () => {
+    setCreatingInvite(true);
+    try {
+      const response = await fetch('/api/v1/admin/invite-codes', { method: 'POST' });
+      const payload = (await response.json()) as {
+        success: boolean;
+        data?: { invitation: AdminInvite & { code: string } };
+        error?: { message?: string };
+      };
+      if (!response.ok || !payload.success || !payload.data) {
+        toast.error(payload.error?.message ?? '注册码生成失败');
+        return;
+      }
+      setInvites((items) => [payload.data!.invitation, ...items]);
+      await copyInviteCode(payload.data.invitation.code);
+    } catch {
+      toast.error('当前无法连接注册码服务');
+    } finally {
+      setCreatingInvite(false);
+    }
+  };
+
+  const revokeInvite = async (invite: AdminInvite) => {
+    try {
+      const response = await fetch(`/api/v1/admin/invite-codes/${invite.id}`, {
+        method: 'DELETE'
+      });
+      const payload = (await response.json()) as {
+        success: boolean;
+        error?: { message?: string };
+      };
+      if (!response.ok || !payload.success) {
+        toast.error(payload.error?.message ?? '注册码撤销失败');
+        return;
+      }
+      setInvites((items) =>
+        items.map((item) =>
+          item.id === invite.id ? { ...item, status: 'revoked', code: undefined } : item
+        )
+      );
+      toast.success('注册码已撤销');
+    } catch {
+      toast.error('当前无法连接注册码服务');
+    }
   };
 
   const handleRechargeSync = (rechargeId: string) => {
@@ -512,46 +601,85 @@ export function AdminDashboard() {
               <button
                 type='button'
                 onClick={createInvite}
-                className='inline-flex h-10 items-center gap-2 bg-[#d84a3f] px-4 text-sm font-semibold text-[#130f0f]'
+                disabled={creatingInvite}
+                className='inline-flex h-10 items-center gap-2 bg-[#d84a3f] px-4 text-sm font-semibold text-[#130f0f] disabled:cursor-wait disabled:opacity-55'
               >
-                <Icons.add size={16} /> 生成注册码
+                <Icons.add size={16} /> {creatingInvite ? '正在生成…' : '生成注册码'}
               </button>
             }
           />
           <div className='mb-6 max-w-2xl border-l-2 border-[#d84a3f] bg-white/[0.025] p-4 text-sm leading-6 text-white/46'>
-            每个注册码只能注册一个账号。正式系统会记录生成人、使用人、生成时间和使用时间。
+            每个注册码只能注册一个账号。完整代码仅在生成时显示并自动复制；刷新后只保留末六位，避免后台历史页面泄露有效注册码。
           </div>
-          <div className='grid gap-3 md:grid-cols-2 xl:grid-cols-3'>
-            {invites.map((invite) => (
-              <div key={invite.id} className='border border-white/10 p-5'>
-                <div className='flex items-start justify-between gap-4'>
-                  <code className='text-lg tracking-[0.08em]'>{invite.code}</code>
-                  <span
-                    className={cn(
-                      'px-2 py-1 text-[10px]',
-                      invite.status === 'unused'
-                        ? 'bg-emerald-500/10 text-emerald-300'
-                        : 'bg-white/8 text-white/36'
-                    )}
-                  >
-                    {invite.status === 'unused' ? '未使用' : '已使用'}
-                  </span>
+          {invitesLoading ? (
+            <div className='grid gap-3 md:grid-cols-2 xl:grid-cols-3' aria-label='正在读取注册码'>
+              {[0, 1, 2].map((item) => (
+                <div
+                  key={item}
+                  className='h-40 animate-pulse border border-white/10 bg-white/[0.025]'
+                />
+              ))}
+            </div>
+          ) : invites.length ? (
+            <div className='grid gap-3 md:grid-cols-2 xl:grid-cols-3'>
+              {invites.map((invite) => (
+                <div key={invite.id} className='border border-white/10 p-5'>
+                  <div className='flex items-start justify-between gap-4'>
+                    <code className='text-base tracking-[0.06em] break-all'>
+                      {invite.code ?? `XINZHI-${invite.codeHint}`}
+                    </code>
+                    <span
+                      className={cn(
+                        'px-2 py-1 text-[10px]',
+                        invite.status === 'unused'
+                          ? 'bg-emerald-500/10 text-emerald-300'
+                          : invite.status === 'used'
+                            ? 'bg-white/8 text-white/36'
+                            : 'bg-red-500/10 text-red-300'
+                      )}
+                    >
+                      {invite.status === 'unused'
+                        ? '未使用'
+                        : invite.status === 'used'
+                          ? '已使用'
+                          : '已撤销'}
+                    </span>
+                  </div>
+                  <p className='mt-5 text-xs text-white/30'>
+                    生成于 {new Date(invite.createdAt).toLocaleString('zh-CN')}
+                  </p>
+                  {invite.usedByName ? (
+                    <p className='mt-1 text-xs text-white/30'>
+                      使用人 {invite.usedByName} · {invite.usedByEmail}
+                    </p>
+                  ) : null}
+                  <div className='mt-5 flex items-center gap-5'>
+                    <button
+                      type='button'
+                      disabled={!invite.code || invite.status !== 'unused'}
+                      onClick={() => invite.code && copyInviteCode(invite.code)}
+                      className='inline-flex items-center gap-2 text-xs text-white/52 disabled:cursor-not-allowed disabled:text-white/20'
+                    >
+                      <Icons.page size={14} /> {invite.code ? '复制注册码' : '完整代码不再回显'}
+                    </button>
+                    {invite.status === 'unused' ? (
+                      <button
+                        type='button'
+                        onClick={() => revokeInvite(invite)}
+                        className='text-xs text-[#ff8075]/72 hover:text-[#ff8075]'
+                      >
+                        撤销
+                      </button>
+                    ) : null}
+                  </div>
                 </div>
-                <p className='mt-5 text-xs text-white/30'>生成于 {invite.createdAt}</p>
-                {invite.usedBy ? (
-                  <p className='mt-1 text-xs text-white/30'>使用人 {invite.usedBy}</p>
-                ) : null}
-                <button
-                  type='button'
-                  disabled={invite.status === 'used'}
-                  onClick={() => copyInviteCode(invite.code)}
-                  className='mt-5 inline-flex items-center gap-2 text-xs text-white/52 disabled:cursor-not-allowed disabled:text-white/20'
-                >
-                  <Icons.page size={14} /> 复制注册码
-                </button>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <div className='border border-dashed border-white/12 px-6 py-16 text-center text-sm text-white/34'>
+              还没有注册码。生成后会自动复制到剪贴板。
+            </div>
+          )}
         </>
       );
     }
@@ -711,7 +839,7 @@ export function AdminDashboard() {
             className='flex w-full items-center gap-3 px-3 py-2 text-xs text-white/42 hover:text-white'
           >
             <Icons.logout size={15} />
-            退出管理员演示
+            退出管理员账号
           </button>
         </div>
       </aside>

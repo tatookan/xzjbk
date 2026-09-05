@@ -1,14 +1,12 @@
 'use client';
 
 import {
-  initialInvites,
   initialOrders,
   initialRecharges,
   initialScripts,
   initialUsers
 } from '@/features/script-library/api/service';
 import type {
-  DemoInvite,
   DemoOrder,
   DemoRecharge,
   DemoRole,
@@ -19,6 +17,7 @@ import type {
   ScriptPreviewLine,
   ScriptPresentationMode
 } from '@/features/script-library/api/types';
+import { authClient } from '@/modules/identity/auth-client';
 import { createContext, useContext, useState } from 'react';
 
 interface PurchaseResult {
@@ -48,22 +47,19 @@ interface UploadScriptInput {
 
 interface ScriptLibraryDemoContextValue {
   role: DemoRole;
+  authPending: boolean;
   currentUser: DemoUser | null;
   scripts: DemoScript[];
   users: DemoUser[];
-  invites: DemoInvite[];
   orders: DemoOrder[];
   recharges: DemoRecharge[];
   purchasedIds: string[];
-  loginAs: (role: Exclude<DemoRole, 'guest'>) => void;
-  logout: () => void;
-  register: (code: string) => PurchaseResult;
+  logout: () => Promise<void>;
   purchaseScript: (scriptId: string) => PurchaseResult;
   recharge: (amount: number) => void;
   syncRecharge: (rechargeId: string) => PurchaseResult;
   adjustPoints: (userId: string, amount: number) => void;
   setUserDiscount: (userId: string, discount: number) => void;
-  generateInvite: () => string;
   uploadScript: (input: UploadScriptInput) => void;
   updateScript: (input: ScriptAdminUpdate) => PurchaseResult;
   deleteScript: (scriptId: string) => PurchaseResult;
@@ -71,50 +67,29 @@ interface ScriptLibraryDemoContextValue {
 
 const ScriptLibraryDemoContext = createContext<ScriptLibraryDemoContextValue | null>(null);
 
-function makeCode(): string {
-  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  const values = new Uint8Array(6);
-  crypto.getRandomValues(values);
-  return `XZ-${Array.from(values, (value) => alphabet[value % alphabet.length]).join('')}`;
+async function logout(): Promise<void> {
+  await authClient.signOut();
 }
 
 export function ScriptLibraryDemoProvider({ children }: { children: React.ReactNode }) {
-  const [role, setRole] = useState<DemoRole>('guest');
+  const { data: session, isPending: authPending } = authClient.useSession();
   const [scripts, setScripts] = useState(initialScripts);
   const [users, setUsers] = useState(initialUsers);
-  const [invites, setInvites] = useState(initialInvites);
   const [orders, setOrders] = useState(initialOrders);
   const [recharges, setRecharges] = useState(initialRecharges);
   const [purchasedIds, setPurchasedIds] = useState<string[]>([]);
 
-  const currentUser =
-    role === 'admin'
-      ? (users.find((user) => user.role === 'admin') ?? null)
-      : role === 'member'
-        ? (users.find((user) => user.id === 'user-shen') ?? null)
-        : null;
-
-  const loginAs = (nextRole: Exclude<DemoRole, 'guest'>) => setRole(nextRole);
-  const logout = () => setRole('guest');
-
-  const register = (code: string): PurchaseResult => {
-    const normalizedCode = code.trim().toUpperCase();
-    const invite = invites.find(
-      (item) => item.status === 'unused' && item.code.toUpperCase() === normalizedCode
-    );
-    if (!invite && normalizedCode !== 'XINZHI-2026') {
-      return { ok: false, message: '注册码无效或已经使用' };
-    }
-    if (invite) {
-      setInvites((items) =>
-        items.map((item) =>
-          item.id === invite.id ? { ...item, status: 'used', usedBy: '沈予安' } : item
-        )
-      );
-    }
-    setRole('member');
-    return { ok: true, message: '注册成功' };
-  };
+  const role: DemoRole = session?.user.role ?? 'guest';
+  const currentUser: DemoUser | null = session
+    ? {
+        id: session.user.id,
+        name: session.user.name,
+        email: session.user.email,
+        points: session.user.pointsBalance,
+        discount: session.user.discountBasisPoints / 100,
+        role: session.user.role
+      }
+    : null;
 
   const purchaseScript = (scriptId: string): PurchaseResult => {
     if (role !== 'member' || !currentUser) {
@@ -198,15 +173,6 @@ export function ScriptLibraryDemoProvider({ children }: { children: React.ReactN
 
   const setUserDiscount = (userId: string, discount: number) => {
     setUsers((items) => items.map((item) => (item.id === userId ? { ...item, discount } : item)));
-  };
-
-  const generateInvite = (): string => {
-    const code = makeCode();
-    setInvites((items) => [
-      { id: `invite-${items.length + 1}`, code, status: 'unused', createdAt: '今天' },
-      ...items
-    ]);
-    return code;
   };
 
   const uploadScript = (input: UploadScriptInput) => {
@@ -297,22 +263,19 @@ export function ScriptLibraryDemoProvider({ children }: { children: React.ReactN
 
   const value: ScriptLibraryDemoContextValue = {
     role,
+    authPending,
     currentUser,
     scripts,
     users,
-    invites,
     orders,
     recharges,
     purchasedIds,
-    loginAs,
     logout,
-    register,
     purchaseScript,
     recharge,
     syncRecharge,
     adjustPoints,
     setUserDiscount,
-    generateInvite,
     uploadScript,
     updateScript,
     deleteScript

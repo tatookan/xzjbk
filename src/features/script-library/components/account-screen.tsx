@@ -12,9 +12,14 @@ import { toast } from 'sonner';
 const rechargeOptions = [100, 200, 500, 1000];
 
 export function AccountScreen() {
-  const { role, currentUser, scripts, purchasedIds, recharge } = useScriptLibraryDemo();
+  const { role, authPending, currentUser, scripts, purchasedIds, recharge } =
+    useScriptLibraryDemo();
   const [amount, setAmount] = useState(500);
   const [paymentOpen, setPaymentOpen] = useState(false);
+
+  if (authPending) {
+    return <main className='min-h-screen bg-[#0d0e11]' />;
+  }
 
   if (role === 'guest' || !currentUser) {
     return (

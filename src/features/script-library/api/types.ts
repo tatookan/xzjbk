@@ -76,14 +76,6 @@ export interface DemoUser {
   role: 'member' | 'admin';
 }
 
-export interface DemoInvite {
-  id: string;
-  code: string;
-  status: 'unused' | 'used';
-  createdAt: string;
-  usedBy?: string;
-}
-
 export interface DemoOrder {
   id: string;
   scriptTitle: string;
