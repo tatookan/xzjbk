@@ -1,52 +1,50 @@
 'use client';
 
-import * as Sentry from '@sentry/nextjs';
-import { useEffect } from 'react';
-
-// global-error replaces the root layout when it errors, so globals.css is not
-// loaded here — styles must be inline and self-contained.
 export default function GlobalError({
-  error,
   reset
 }: {
   error: Error & { digest?: string };
   reset: () => void;
 }) {
-  useEffect(() => {
-    Sentry.captureException(error);
-  }, [error]);
-
   return (
-    <html lang='en'>
+    <html lang='zh-CN'>
       <body
         style={{
           margin: 0,
-          display: 'flex',
           minHeight: '100vh',
+          display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
+          background: '#0b0c0e',
+          color: '#f4f0e8',
           fontFamily: 'system-ui, sans-serif'
         }}
       >
-        <div style={{ textAlign: 'center', padding: '1rem' }}>
-          <h1 style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>Something went wrong</h1>
-          <p style={{ color: '#6b7280', marginBottom: '1.25rem' }}>
-            An unexpected error occurred. Please try again.
+        <main style={{ width: 'min(560px, calc(100% - 48px))', borderTop: '1px solid #34363b' }}>
+          <p style={{ marginTop: 24, color: '#8f9094', fontSize: 12, letterSpacing: '0.2em' }}>
+            XINZHI · SYSTEM NOTICE
+          </p>
+          <h1 style={{ margin: '24px 0 0', fontSize: 40, lineHeight: 1.05 }}>页面暂时无法呈现</h1>
+          <p style={{ margin: '20px 0 0', color: '#a7a8ac', lineHeight: 1.8 }}>
+            系统遇到了一点问题，请稍后重试。如果问题持续出现，请联系管理员。
           </p>
           <button
-            onClick={() => reset()}
+            onClick={reset}
             style={{
-              padding: '0.5rem 1.25rem',
-              borderRadius: '0.5rem',
-              border: '1px solid #d1d5db',
-              background: 'transparent',
+              marginTop: 32,
+              minHeight: 44,
+              padding: '0 20px',
+              border: 0,
+              borderRadius: 999,
+              background: '#f3efe6',
+              color: '#141518',
               font: 'inherit',
               cursor: 'pointer'
             }}
           >
-            Try again
+            重新加载
           </button>
-        </div>
+        </main>
       </body>
     </html>
   );

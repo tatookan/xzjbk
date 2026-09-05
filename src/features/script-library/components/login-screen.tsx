@@ -68,7 +68,10 @@ export function LoginScreen() {
             </span>
             <span className='text-[11px] tracking-[0.2em] text-white/44'>SCRIPT LIBRARY</span>
           </Link>
-          <Link href='/scripts' className='text-sm text-white/48 transition-colors hover:text-white'>
+          <Link
+            href='/scripts'
+            className='text-sm text-white/48 transition-colors hover:text-white'
+          >
             先浏览剧本
           </Link>
         </div>
