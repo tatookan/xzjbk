@@ -2,7 +2,7 @@
 
 import { Icons } from '@/components/icons';
 import type { Icon } from '@/components/icons';
-import type { DemoScript, DemoUser } from '@/features/script-library/api/types';
+import type { DemoScript, DemoUser, RechargePlan } from '@/features/script-library/api/types';
 import { DemoModal } from '@/features/script-library/components/demo-modal';
 import { useScriptLibraryDemo } from '@/features/script-library/components/demo-context';
 import { ScriptUploadFlow } from '@/features/script-library/components/script-upload-flow';
@@ -39,7 +39,7 @@ const navItems: { id: AdminSection; label: string; icon: Icon }[] = [
   { id: 'overview', label: '经营概览', icon: Icons.dashboard },
   { id: 'showcase', label: '首页海报', icon: Icons.media },
   { id: 'scripts', label: '剧本管理', icon: Icons.post },
-  { id: 'users', label: '用户与积分', icon: Icons.teams },
+  { id: 'users', label: '用户与心源', icon: Icons.teams },
   { id: 'invites', label: '注册码', icon: Icons.lock },
   { id: 'orders', label: '剧本订单', icon: Icons.billing },
   { id: 'recharges', label: '支付预留', icon: Icons.creditCard }
@@ -107,11 +107,13 @@ export function AdminDashboard() {
     role,
     authPending,
     logout,
+    currentUser,
     scripts,
     users,
+    usersLoading,
+    usersError,
     orders,
     adjustPoints,
-    setUserDiscount,
     deleteScript
   } = useScriptLibraryDemo();
   const [section, setSection] = useState<AdminSection>('overview');
@@ -120,11 +122,13 @@ export function AdminDashboard() {
   const [editingScript, setEditingScript] = useState<DemoScript | null>(null);
   const [deletingScript, setDeletingScript] = useState<DemoScript | null>(null);
   const [editingUser, setEditingUser] = useState<DemoUser | null>(null);
+  const [adjustingUser, setAdjustingUser] = useState(false);
   const [scriptQuery, setScriptQuery] = useState('');
   const [scriptStatus, setScriptStatus] = useState<'all' | DemoScript['status']>('all');
   const [invites, setInvites] = useState<AdminInvite[]>([]);
   const [invitesLoading, setInvitesLoading] = useState(true);
   const [creatingInvite, setCreatingInvite] = useState(false);
+  const [rechargePlans, setRechargePlans] = useState<RechargePlan[]>([]);
 
   useEffect(() => {
     if (role !== 'admin') return;
@@ -149,6 +153,23 @@ export function AdminDashboard() {
         if (!controller.signal.aborted) setInvitesLoading(false);
       });
 
+    return () => controller.abort();
+  }, [role]);
+
+  useEffect(() => {
+    if (role !== 'admin') return;
+    const controller = new AbortController();
+    fetch('/api/v1/recharge-plans', { cache: 'no-store', signal: controller.signal })
+      .then(async (response) => {
+        const payload = (await response.json()) as {
+          success: boolean;
+          data?: { items: RechargePlan[] };
+        };
+        if (response.ok && payload.success && payload.data) {
+          setRechargePlans(payload.data.items);
+        }
+      })
+      .catch(() => undefined);
     return () => controller.abort();
   }, [role]);
 
@@ -201,14 +222,23 @@ export function AdminDashboard() {
     return matchesKeyword && (scriptStatus === 'all' || script.status === scriptStatus);
   });
 
-  const handleUserUpdate = (event: FormEvent<HTMLFormElement>) => {
+  const handleUserUpdate = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!editingUser) return;
     const data = new FormData(event.currentTarget);
-    adjustPoints(editingUser.id, Number(data.get('pointsAdjustment') ?? 0));
-    setUserDiscount(editingUser.id, Number(data.get('discount') ?? 100));
+    setAdjustingUser(true);
+    const result = await adjustPoints(
+      editingUser.id,
+      Number(data.get('pointsAdjustment') ?? 0),
+      String(data.get('note') ?? '')
+    );
+    setAdjustingUser(false);
+    if (!result.ok) {
+      toast.error(result.message);
+      return;
+    }
     setEditingUser(null);
-    toast.success('用户积分和折扣已更新');
+    toast.success(result.message);
   };
 
   const createInvite = async () => {
@@ -334,7 +364,7 @@ export function AdminDashboard() {
                       {order.buyer}
                     </p>
                     <p className='self-center text-right text-sm tabular-nums'>
-                      {order.amount.toLocaleString()} 积分
+                      {order.amount.toLocaleString()} 心源
                     </p>
                   </div>
                 ))}
@@ -353,8 +383,8 @@ export function AdminDashboard() {
                   ['recharges', '支付宝接口已预留', '暂不开放充值，不产生模拟订单'],
                   [
                     'users',
-                    `${users.filter((user) => user.role === 'member' && user.points < 3000).length} 位用户积分偏低`,
-                    '可查看余额并按需人工调整'
+                    `${users.filter((user) => user.role === 'member' && user.points < 3000).length} 位用户心源偏低`,
+                    '可查看余额并按需人工调整，所有变动记录流水'
                   ]
                 ].map(([target, title, text], index) => (
                   <button
@@ -541,19 +571,26 @@ export function AdminDashboard() {
     if (section === 'users') {
       return (
         <>
-          <SectionHeading eyebrow='Members' title='用户与积分' />
+          <SectionHeading eyebrow='Members' title='用户与心源' />
           <div className='overflow-x-auto border border-white/10'>
             <table className='w-full min-w-[720px] text-left text-sm'>
               <thead className='border-b border-white/10 bg-white/[0.025] text-xs text-white/34'>
                 <tr>
                   <th className='px-5 py-4 font-normal'>用户</th>
                   <th className='px-5 py-4 font-normal'>角色</th>
-                  <th className='px-5 py-4 font-normal'>积分</th>
-                  <th className='px-5 py-4 font-normal'>账号折扣</th>
+                  <th className='px-5 py-4 font-normal'>心源余额</th>
+                  <th className='px-5 py-4 font-normal'>计价规则</th>
                   <th className='px-5 py-4 text-right font-normal'>操作</th>
                 </tr>
               </thead>
               <tbody>
+                {usersLoading ? (
+                  <tr>
+                    <td colSpan={5} className='px-5 py-12' aria-label='正在读取用户账户'>
+                      <div className='h-12 animate-pulse bg-white/[0.035]' />
+                    </td>
+                  </tr>
+                ) : null}
                 {users.map((user) => (
                   <tr key={user.id} className='border-b border-white/8 last:border-b-0'>
                     <td className='px-5 py-4'>
@@ -566,7 +603,7 @@ export function AdminDashboard() {
                     <td className='px-5 py-4 font-mono text-xs tabular-nums'>
                       {user.points.toLocaleString()}
                     </td>
-                    <td className='px-5 py-4'>{user.discount / 10} 折</td>
+                    <td className='px-5 py-4 text-xs text-white/42'>统一价格</td>
                     <td className='px-5 py-4 text-right'>
                       {user.role === 'member' ? (
                         <button
@@ -582,6 +619,13 @@ export function AdminDashboard() {
                     </td>
                   </tr>
                 ))}
+                {!usersLoading && !users.length ? (
+                  <tr>
+                    <td colSpan={5} className='px-5 py-14 text-center text-sm text-white/34'>
+                      {usersError || '还没有用户账户'}
+                    </td>
+                  </tr>
+                ) : null}
               </tbody>
             </table>
           </div>
@@ -693,7 +737,7 @@ export function AdminDashboard() {
                   <th className='px-5 py-4 font-normal'>订单号</th>
                   <th className='px-5 py-4 font-normal'>剧本</th>
                   <th className='px-5 py-4 font-normal'>购买人</th>
-                  <th className='px-5 py-4 font-normal'>成交积分</th>
+                  <th className='px-5 py-4 font-normal'>成交心源</th>
                   <th className='px-5 py-4 font-normal'>时间</th>
                 </tr>
               </thead>
@@ -716,7 +760,7 @@ export function AdminDashboard() {
 
     return (
       <>
-        <SectionHeading eyebrow='Payment integration' title='支付系统预留' />
+        <SectionHeading eyebrow='Recharge policy' title='充值档位与支付预留' />
         <div className='grid gap-5 lg:grid-cols-[1.1fr_0.9fr]'>
           <section className='border border-white/10 bg-white/[0.025] p-6 sm:p-8'>
             <div className='flex items-start justify-between gap-6'>
@@ -726,26 +770,42 @@ export function AdminDashboard() {
                 </span>
                 <h3 className='mt-5 font-serif text-3xl'>支付宝电脑网站支付</h3>
                 <p className='mt-4 max-w-xl text-sm leading-7 text-white/42'>
-                  当前不会创建充值订单，也不会出现模拟到账。以后接入时只需实现支付提供方适配器，不影响积分、订单和用户模块。
+                  当前不会创建充值订单，也不会出现模拟到账。基础兑换固定为 1 元 100
+                  心源，优惠全部通过档位赠送实现。
                 </p>
               </div>
               <Icons.creditCard className='shrink-0 text-[#d84a3f]' size={26} />
             </div>
           </section>
           <section className='border border-white/10 p-6 sm:p-8'>
-            <p className='text-[10px] tracking-[0.18em] text-white/28 uppercase'>Reserved flow</p>
-            <ol className='mt-5 space-y-4 text-xs text-white/42'>
-              {['服务端创建支付单', '跳转支付宝电脑收银台', '验签回调并增加积分'].map(
-                (step, index) => (
-                  <li key={step} className='flex items-center gap-3'>
-                    <span className='grid size-6 place-items-center border border-white/12 font-mono text-[10px] text-[#d84a3f]'>
-                      {index + 1}
-                    </span>
-                    {step}
-                  </li>
-                )
-              )}
-            </ol>
+            <p className='text-xs text-white/34'>当前充值档位</p>
+            {rechargePlans.length ? (
+              <div className='mt-5 grid grid-cols-2 gap-3'>
+                {rechargePlans.map((plan) => (
+                  <div key={plan.id} className='border border-white/10 p-4'>
+                    <div className='flex items-baseline justify-between gap-3'>
+                      <strong className='font-serif text-xl font-normal'>¥{plan.amountYuan}</strong>
+                      <span className='text-[10px] text-[#df675c]'>
+                        {plan.effectiveDiscount} 折
+                      </span>
+                    </div>
+                    <p className='mt-2 font-mono text-xs tabular-nums'>
+                      {plan.totalPoints.toLocaleString()} 心源
+                    </p>
+                    <p className='mt-1 text-[10px] text-white/28'>
+                      赠送 {plan.bonusPoints.toLocaleString()}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className='mt-5 border border-dashed border-white/12 p-8 text-center text-xs text-white/32'>
+                正在读取充值档位
+              </div>
+            )}
+            <p className='mt-5 text-xs leading-5 text-white/30'>
+              数据库会拒绝低于 4 折的档位配置。支付接入后，回调只按下单时保存的档位快照入账。
+            </p>
           </section>
         </div>
       </>
@@ -845,7 +905,7 @@ export function AdminDashboard() {
           </div>
           <div className='flex items-center gap-3 text-xs text-white/42'>
             <span className='size-2 rounded-full bg-emerald-400' />
-            <span>管理员 · 罗嘉宁</span>
+            <span>管理员 · {currentUser?.name ?? '心智管理员'}</span>
           </div>
         </header>
         <div className='p-5 sm:p-8 lg:p-10 xl:p-12'>{renderContent()}</div>
@@ -905,18 +965,14 @@ export function AdminDashboard() {
       >
         {editingUser ? (
           <form onSubmit={handleUserUpdate} className='space-y-5'>
-            <div className='grid grid-cols-2 gap-3 border-y border-white/10 py-4 text-sm'>
+            <div className='border-y border-white/10 py-4 text-sm'>
               <div>
-                <p className='text-xs text-white/32'>当前积分</p>
+                <p className='text-xs text-white/32'>当前心源</p>
                 <p className='mt-1 font-serif text-2xl'>{editingUser.points.toLocaleString()}</p>
-              </div>
-              <div>
-                <p className='text-xs text-white/32'>当前折扣</p>
-                <p className='mt-1 font-serif text-2xl'>{editingUser.discount / 10} 折</p>
               </div>
             </div>
             <label className='block text-sm text-white/56'>
-              积分增减
+              心源增减
               <input
                 name='pointsAdjustment'
                 type='number'
@@ -926,18 +982,16 @@ export function AdminDashboard() {
               <span className='mt-1 block text-xs text-white/28'>输入正数增加，负数减少</span>
             </label>
             <label className='block text-sm text-white/56'>
-              账号折扣
-              <select
-                name='discount'
-                defaultValue={editingUser.discount}
-                className='mt-2 h-11 w-full border border-white/14 bg-[#18191e] px-3 text-white outline-none focus:border-[#d84a3f]'
-              >
-                <option value='100'>无折扣</option>
-                <option value='95'>9.5 折</option>
-                <option value='90'>9 折</option>
-                <option value='85'>8.5 折</option>
-                <option value='80'>8 折</option>
-              </select>
+              调整原因
+              <input
+                name='note'
+                required
+                minLength={2}
+                maxLength={300}
+                placeholder='例如：线下收款补录、活动奖励或纠错'
+                className='mt-2 h-11 w-full border border-white/14 bg-white/[0.035] px-3 text-white outline-none placeholder:text-white/24 focus:border-[#d84a3f]'
+              />
+              <span className='mt-1 block text-xs text-white/28'>原因会写入账户流水和审计记录</span>
             </label>
             <div className='flex gap-3 pt-2'>
               <button
@@ -949,9 +1003,10 @@ export function AdminDashboard() {
               </button>
               <button
                 type='submit'
-                className='h-11 flex-1 bg-[#d84a3f] font-semibold text-[#130f0f]'
+                disabled={adjustingUser}
+                className='h-11 flex-1 bg-[#d84a3f] font-semibold text-[#130f0f] disabled:cursor-wait disabled:opacity-55'
               >
-                保存调整
+                {adjustingUser ? '正在保存…' : '保存调整'}
               </button>
             </div>
           </form>

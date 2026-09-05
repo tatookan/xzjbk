@@ -410,7 +410,7 @@ export function ScriptUploadFlow({ open, onClose }: { open: boolean; onClose: ()
                     className={inputClass}
                   />
                 </Field>
-                <Field label='定价积分'>
+                <Field label='定价心源'>
                   <input
                     name='price'
                     type='number'

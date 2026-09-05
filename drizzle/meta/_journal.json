@@ -22,6 +22,13 @@
       "when": 1788614959481,
       "tag": "0002_script-preview-visibility",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1788616231268,
+      "tag": "0003_heart-points",
+      "breakpoints": true
     }
   ]
 }

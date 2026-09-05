@@ -59,7 +59,6 @@ export async function registerWithInvite(
         email,
         role: 'member',
         pointsBalance: 0,
-        discountBasisPoints: 10_000,
         createdAt: now,
         updatedAt: now
       });

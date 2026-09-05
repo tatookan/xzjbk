@@ -1,6 +1,6 @@
 'use client';
 
-import { initialOrders, initialUsers } from '@/features/script-library/api/demo-admin-data';
+import { initialOrders } from '@/features/script-library/api/demo-admin-data';
 import type {
   DemoOrder,
   DemoRole,
@@ -22,13 +22,14 @@ interface ScriptLibraryDemoContextValue {
   currentUser: DemoUser | null;
   scripts: DemoScript[];
   users: DemoUser[];
+  usersLoading: boolean;
+  usersError: string;
   orders: DemoOrder[];
   purchasedIds: string[];
   scriptsLoading: boolean;
   logout: () => Promise<void>;
   purchaseScript: (scriptId: string) => PurchaseResult;
-  adjustPoints: (userId: string, amount: number) => void;
-  setUserDiscount: (userId: string, discount: number) => void;
+  adjustPoints: (userId: string, amount: number, note: string) => Promise<PurchaseResult>;
   createScript: (formData: FormData) => Promise<PurchaseResult>;
   loadScript: (scriptId: string) => Promise<DemoScript | null>;
   updateScript: (input: ScriptAdminUpdate) => Promise<PurchaseResult>;
@@ -45,7 +46,9 @@ export function ScriptLibraryDemoProvider({ children }: { children: React.ReactN
   const { data: session, isPending: authPending } = authClient.useSession();
   const [scripts, setScripts] = useState<DemoScript[]>([]);
   const [scriptsLoading, setScriptsLoading] = useState(true);
-  const [users, setUsers] = useState(initialUsers);
+  const [users, setUsers] = useState<DemoUser[]>([]);
+  const [usersLoading, setUsersLoading] = useState(true);
+  const [usersError, setUsersError] = useState('');
   const [orders] = useState(initialOrders);
   const [purchasedIds, setPurchasedIds] = useState<string[]>([]);
 
@@ -56,7 +59,6 @@ export function ScriptLibraryDemoProvider({ children }: { children: React.ReactN
         name: session.user.name,
         email: session.user.email,
         points: session.user.pointsBalance,
-        discount: session.user.discountBasisPoints / 100,
         role: session.user.role
       }
     : null;
@@ -83,6 +85,32 @@ export function ScriptLibraryDemoProvider({ children }: { children: React.ReactN
     };
   }, [authPending, role]);
 
+  useEffect(() => {
+    if (authPending || role !== 'admin') return;
+    let active = true;
+    fetch('/api/v1/admin/users', { cache: 'no-store' })
+      .then(async (response) => {
+        const payload = (await response.json()) as {
+          success: boolean;
+          data?: { items: DemoUser[] };
+        };
+        if (active && response.ok && payload.success && payload.data) {
+          setUsers(payload.data.items);
+        } else if (active) {
+          setUsersError('用户账户读取失败');
+        }
+      })
+      .catch(() => {
+        if (active) setUsersError('当前无法连接用户账户服务');
+      })
+      .finally(() => {
+        if (active) setUsersLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [authPending, role]);
+
   const purchaseScript = (scriptId: string): PurchaseResult => {
     if (role !== 'member' || !currentUser) {
       return { ok: false, message: '请先登录白名单账号' };
@@ -94,16 +122,30 @@ export function ScriptLibraryDemoProvider({ children }: { children: React.ReactN
     return { ok: false, message: '购买功能将在交易阶段接入，当前请联系管理员' };
   };
 
-  const adjustPoints = (userId: string, amount: number) => {
-    setUsers((items) =>
-      items.map((item) =>
-        item.id === userId ? { ...item, points: Math.max(0, item.points + amount) } : item
-      )
-    );
-  };
-
-  const setUserDiscount = (userId: string, discount: number) => {
-    setUsers((items) => items.map((item) => (item.id === userId ? { ...item, discount } : item)));
+  const adjustPoints = async (
+    userId: string,
+    amount: number,
+    note: string
+  ): Promise<PurchaseResult> => {
+    try {
+      const response = await fetch(`/api/v1/admin/users/${userId}/points`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ delta: amount, note })
+      });
+      const payload = (await response.json()) as {
+        success: boolean;
+        data?: { user: DemoUser };
+        error?: { message?: string };
+      };
+      if (!response.ok || !payload.success || !payload.data) {
+        return { ok: false, message: payload.error?.message ?? '心源调整失败' };
+      }
+      setUsers((items) => items.map((item) => (item.id === userId ? payload.data!.user : item)));
+      return { ok: true, message: '心源余额已更新，流水已经记录' };
+    } catch {
+      return { ok: false, message: '当前无法连接心源账户服务' };
+    }
   };
 
   const createScript = async (formData: FormData): Promise<PurchaseResult> => {
@@ -232,13 +274,14 @@ export function ScriptLibraryDemoProvider({ children }: { children: React.ReactN
     currentUser,
     scripts,
     users,
+    usersLoading,
+    usersError,
     orders,
     purchasedIds,
     scriptsLoading,
     logout,
     purchaseScript,
     adjustPoints,
-    setUserDiscount,
     createScript,
     loadScript,
     updateScript,

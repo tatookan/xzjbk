@@ -31,6 +31,32 @@ export const orderStatus = pgEnum('order_status', [
 ]);
 export const rechargeStatus = pgEnum('recharge_status', ['pending', 'paid', 'closed', 'refunded']);
 
+export const rechargePlans = pgTable(
+  'recharge_plans',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    name: text('name').notNull(),
+    amountCents: integer('amount_cents').notNull(),
+    basePoints: integer('base_points').notNull(),
+    bonusPoints: integer('bonus_points').notNull().default(0),
+    sortOrder: integer('sort_order').notNull().default(0),
+    isActive: boolean('is_active').notNull().default(true),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [
+    uniqueIndex('recharge_plans_amount_unique').on(table.amountCents),
+    index('recharge_plans_active_sort_idx').on(table.isActive, table.sortOrder),
+    check('recharge_plans_amount_positive', sql`${table.amountCents} > 0`),
+    check('recharge_plans_base_rate_fixed', sql`${table.basePoints} = ${table.amountCents}`),
+    check('recharge_plans_bonus_nonnegative', sql`${table.bonusPoints} >= 0`),
+    check(
+      'recharge_plans_max_discount',
+      sql`(${table.basePoints} + ${table.bonusPoints}) * 2 <= ${table.amountCents} * 5`
+    )
+  ]
+);
+
 export const pointLedger = pgTable(
   'point_ledger',
   {
@@ -68,9 +94,7 @@ export const scriptOrders = pgTable(
     buyerUserId: text('buyer_user_id')
       .notNull()
       .references(() => users.id, { onDelete: 'restrict' }),
-    originalPricePoints: integer('original_price_points').notNull(),
-    discountBasisPoints: integer('discount_basis_points').notNull(),
-    finalPricePoints: integer('final_price_points').notNull(),
+    pricePoints: integer('price_points').notNull(),
     status: orderStatus('status').notNull().default('pending'),
     completedAt: timestamp('completed_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -82,11 +106,7 @@ export const scriptOrders = pgTable(
       .on(table.scriptId)
       .where(sql`${table.status} = 'completed'`),
     index('script_orders_buyer_created_idx').on(table.buyerUserId, table.createdAt),
-    check(
-      'script_orders_prices_nonnegative',
-      sql`${table.originalPricePoints} >= 0 and ${table.finalPricePoints} >= 0`
-    ),
-    check('script_orders_discount_valid', sql`${table.discountBasisPoints} between 1 and 10000`)
+    check('script_orders_price_positive', sql`${table.pricePoints} > 0`)
   ]
 );
 
@@ -98,7 +118,12 @@ export const rechargeOrders = pgTable(
     userId: text('user_id')
       .notNull()
       .references(() => users.id, { onDelete: 'restrict' }),
+    rechargePlanId: uuid('recharge_plan_id')
+      .notNull()
+      .references(() => rechargePlans.id, { onDelete: 'restrict' }),
     amountCents: integer('amount_cents').notNull(),
+    basePoints: integer('base_points').notNull(),
+    bonusPoints: integer('bonus_points').notNull(),
     points: integer('points').notNull(),
     provider: text('provider').notNull().default('alipay'),
     externalTradeNo: text('external_trade_no'),
@@ -114,7 +139,14 @@ export const rechargeOrders = pgTable(
       .where(sql`${table.externalTradeNo} is not null`),
     index('recharge_orders_user_created_idx').on(table.userId, table.createdAt),
     check('recharge_orders_amount_positive', sql`${table.amountCents} > 0`),
-    check('recharge_orders_points_positive', sql`${table.points} > 0`)
+    check('recharge_orders_points_positive', sql`${table.points} > 0`),
+    check('recharge_orders_base_rate_fixed', sql`${table.basePoints} = ${table.amountCents}`),
+    check('recharge_orders_bonus_nonnegative', sql`${table.bonusPoints} >= 0`),
+    check(
+      'recharge_orders_points_match',
+      sql`${table.points} = ${table.basePoints} + ${table.bonusPoints}`
+    ),
+    check('recharge_orders_max_discount', sql`${table.points} * 2 <= ${table.amountCents} * 5`)
   ]
 );
 

@@ -66,7 +66,7 @@ function ScriptCard({ script }: { script: DemoScript }) {
         <p className='line-clamp-2 min-h-12 text-sm leading-6 text-white/52'>{script.logline}</p>
         <div className='mt-4 flex items-center justify-between border-t border-white/10 pt-3 text-xs'>
           <span className='text-white/42'>
-            {isSold ? '交易已完成' : `${script.price.toLocaleString()} 积分`}
+            {isSold ? '交易已完成' : `${script.price.toLocaleString()} 心源`}
           </span>
           <span className={canOpen ? 'text-[#e46b60]' : 'text-white/28'}>
             {isSold ? '不可查看' : role === 'guest' ? '登录后查看' : '查看详情'}

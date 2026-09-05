@@ -8,8 +8,7 @@ export const authClient = createAuthClient({
     inferAdditionalFields({
       user: {
         role: { type: ['member', 'admin'], required: true },
-        pointsBalance: { type: 'number', required: true },
-        discountBasisPoints: { type: 'number', required: true }
+        pointsBalance: { type: 'number', required: true }
       }
     })
   ]

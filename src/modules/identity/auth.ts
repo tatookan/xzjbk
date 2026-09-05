@@ -45,12 +45,6 @@ function createAuth() {
           required: true,
           defaultValue: 0,
           input: false
-        },
-        discountBasisPoints: {
-          type: 'number',
-          required: true,
-          defaultValue: 10_000,
-          input: false
         }
       }
     },

@@ -26,14 +26,12 @@ export const users = pgTable(
     image: text('image'),
     role: userRole('role').notNull().default('member'),
     pointsBalance: integer('points_balance').notNull().default(0),
-    discountBasisPoints: integer('discount_basis_points').notNull().default(10_000),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
   },
   (table) => [
     uniqueIndex('users_email_unique').on(table.email),
-    check('users_points_nonnegative', sql`${table.pointsBalance} >= 0`),
-    check('users_discount_valid', sql`${table.discountBasisPoints} between 1 and 10000`)
+    check('users_points_nonnegative', sql`${table.pointsBalance} >= 0`)
   ]
 );
 

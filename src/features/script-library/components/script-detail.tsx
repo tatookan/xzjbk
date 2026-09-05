@@ -230,9 +230,7 @@ export function ScriptDetail() {
   if (role === 'guest' || unavailable)
     return <LockedDetail script={script} unavailable={unavailable} />;
 
-  const finalPrice = currentUser
-    ? Math.round((script.price * currentUser.discount) / 100)
-    : script.price;
+  const finalPrice = script.price;
   const deliveryFiles = getDeliveryFiles(script);
   const parallelProduction =
     script.packageMode === 'parallel-production' || Boolean(script.deliverables.chinese);
@@ -578,22 +576,12 @@ export function ScriptDetail() {
                     仅售 1 份
                   </span>
                 </div>
-                {currentUser && currentUser.discount < 100 ? (
-                  <p className='mt-6 text-xs text-white/28 line-through'>
-                    {script.price.toLocaleString()} 积分
-                  </p>
-                ) : (
-                  <div className='h-5' />
-                )}
+                <div className='h-5' />
                 <p className='font-serif text-5xl tracking-[-0.04em] tabular-nums'>
                   {finalPrice.toLocaleString()}
-                  <span className='ml-2 text-sm text-white/36'>积分</span>
+                  <span className='ml-2 text-sm text-white/36'>心源</span>
                 </p>
-                {currentUser && currentUser.discount < 100 ? (
-                  <p className='mt-2 text-xs text-[#d9685e]'>
-                    你的账号享 {currentUser.discount / 10} 折
-                  </p>
-                ) : null}
+                <p className='mt-2 text-xs text-white/30'>所有用户统一扣费</p>
                 <div className='mt-7 border-y border-white/10 py-5 text-xs leading-6 text-white/40'>
                   <p className='flex items-center justify-between'>
                     <span>当前余额</span>
@@ -617,7 +605,7 @@ export function ScriptDetail() {
                   href='/account'
                   className='mt-4 block text-center text-xs text-white/32 hover:text-white'
                 >
-                  积分不足？前往充值
+                  心源不足？前往充值
                 </Link>
               </>
             )}
@@ -647,7 +635,7 @@ export function ScriptDetail() {
         <div className='text-sm text-white/56'>
           <div className='border-y border-white/10 py-5'>
             <div className='flex items-end justify-between'>
-              <span>应付积分</span>
+              <span>应付心源</span>
               <strong className='font-serif text-3xl font-normal text-white'>
                 {finalPrice.toLocaleString()}
               </strong>
@@ -655,7 +643,7 @@ export function ScriptDetail() {
             <div className='mt-3 flex justify-between text-xs text-white/32'>
               <span>购买后余额</span>
               <span>
-                {Math.max(0, (currentUser?.points ?? 0) - finalPrice).toLocaleString()} 积分
+                {Math.max(0, (currentUser?.points ?? 0) - finalPrice).toLocaleString()} 心源
               </span>
             </div>
           </div>
@@ -668,7 +656,7 @@ export function ScriptDetail() {
             ))}
           </div>
           <p className='mt-5 text-xs leading-6 text-white/38'>
-            确认后立即扣除积分并下架该剧本，其他用户将不能继续访问详情。独家交易不可撤销。
+            确认后立即扣除心源并下架该剧本，其他用户将不能继续访问详情。独家交易不可撤销。
           </p>
           <div className='mt-6 flex gap-3'>
             <button

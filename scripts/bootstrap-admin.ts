@@ -52,7 +52,6 @@ async function bootstrapAdmin() {
       email: input.email,
       role: 'admin',
       pointsBalance: 0,
-      discountBasisPoints: 10_000,
       createdAt: now,
       updatedAt: now
     });

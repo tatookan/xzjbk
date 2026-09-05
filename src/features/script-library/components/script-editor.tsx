@@ -223,7 +223,7 @@ export function ScriptEditor({ script, onClose }: { script: DemoScript; onClose:
                 </select>
               </label>
               <label className='text-xs text-white/48'>
-                独家售价（积分）
+                独家售价（心源）
                 <input
                   name='price'
                   type='number'

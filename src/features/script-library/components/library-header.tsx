@@ -63,7 +63,7 @@ export function LibraryHeader() {
               href='/account'
               className='hidden text-xs tabular-nums text-white/62 transition-colors hover:text-white sm:block'
             >
-              {currentUser.points.toLocaleString()} 积分 · {currentUser.discount / 10} 折
+              {currentUser.points.toLocaleString()} 心源
             </Link>
           ) : null}
           {role === 'guest' ? (

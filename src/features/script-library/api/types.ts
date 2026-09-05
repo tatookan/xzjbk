@@ -77,8 +77,30 @@ export interface DemoUser {
   name: string;
   email: string;
   points: number;
-  discount: number;
   role: 'member' | 'admin';
+  createdAt?: string;
+}
+
+export interface PointLedgerEntry {
+  id: string;
+  direction: 'credit' | 'debit';
+  amount: number;
+  balanceAfter: number;
+  source: 'admin-adjustment' | 'recharge' | 'purchase' | 'refund';
+  note: string;
+  createdAt: string;
+}
+
+export interface RechargePlan {
+  id: string;
+  name: string;
+  amountCents: number;
+  amountYuan: number;
+  basePoints: number;
+  bonusPoints: number;
+  totalPoints: number;
+  effectiveDiscount: number;
+  isActive: boolean;
 }
 
 export interface DemoOrder {
