@@ -23,12 +23,12 @@ __mocks__/
 .vscode/
 .idea/
 
-# Environment variables
-.env
-.env*.local
-.env.development
-.env.test
-.env.production.local
+# Environment variables and private local data
+.env*
+var/postgres/
+var/postgres.log
+var/storage/*
+var/backups/
 
 # Docker files
 Dockerfile*

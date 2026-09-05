@@ -1,0 +1,110 @@
+services:
+  database:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-xinzhi}
+      POSTGRES_USER: ${POSTGRES_USER:-xinzhi}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
+    volumes:
+      - xinzhi-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-xinzhi} -d ${POSTGRES_DB:-xinzhi}']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  migrate:
+    build:
+      context: .
+      target: operations
+    env_file: .env.production
+    environment:
+      NODE_ENV: production
+    command: npm run db:migrate
+    depends_on:
+      database:
+        condition: service_healthy
+    restart: 'no'
+
+  app:
+    build:
+      context: .
+      target: runner
+      args:
+        NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL}
+        NEXT_PUBLIC_STUDIO_CN_URL: ${NEXT_PUBLIC_STUDIO_CN_URL:-}
+        NEXT_PUBLIC_STUDIO_GLOBAL_URL: ${NEXT_PUBLIC_STUDIO_GLOBAL_URL:-}
+    restart: unless-stopped
+    env_file: .env.production
+    environment:
+      NODE_ENV: production
+      STORAGE_LOCAL_ROOT: /data/xinzhi-storage
+      PAYMENT_DRIVER: disabled
+    ports:
+      - '127.0.0.1:3000:3000'
+    volumes:
+      - xinzhi-storage:/data/xinzhi-storage
+    depends_on:
+      database:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:3000/api/v1/readiness').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  preflight:
+    profiles: ['ops']
+    build:
+      context: .
+      target: operations
+    env_file: .env.production
+    environment:
+      NODE_ENV: production
+      STORAGE_LOCAL_ROOT: /data/xinzhi-storage
+    command: npm run deploy:check
+    volumes:
+      - xinzhi-storage:/data/xinzhi-storage
+    depends_on:
+      database:
+        condition: service_healthy
+
+  backup:
+    profiles: ['ops']
+    image: postgres:17
+    user: '${BACKUP_UID:-1000}:${BACKUP_GID:-1000}'
+    env_file: .env.production
+    environment:
+      STORAGE_LOCAL_ROOT: /data/xinzhi-storage
+      BACKUP_ROOT: /backups
+    command: ['/opt/xinzhi/backup-create.sh']
+    volumes:
+      - xinzhi-storage:/data/xinzhi-storage:ro
+      - ./var/backups:/backups
+      - ./scripts/backup-create.sh:/opt/xinzhi/backup-create.sh:ro
+    depends_on:
+      database:
+        condition: service_healthy
+
+  backup-verify:
+    profiles: ['ops']
+    image: postgres:17
+    user: '${BACKUP_UID:-1000}:${BACKUP_GID:-1000}'
+    command: ['/opt/xinzhi/backup-verify.sh', '/backups/${BACKUP_NAME:-missing}']
+    volumes:
+      - ./var/backups:/backups:ro
+      - ./scripts/backup-verify.sh:/opt/xinzhi/backup-verify.sh:ro
+
+volumes:
+  xinzhi-postgres:
+  xinzhi-storage:

@@ -14,9 +14,19 @@ function createAuth() {
 
   return betterAuth({
     appName: '心智剧本库',
-    baseURL: process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000',
+    baseURL: env.NEXT_PUBLIC_APP_URL,
     secret: env.BETTER_AUTH_SECRET,
-    trustedOrigins: [process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'],
+    trustedOrigins: [env.NEXT_PUBLIC_APP_URL],
+    rateLimit: {
+      enabled: true,
+      storage: 'memory',
+      window: 60,
+      max: 60,
+      customRules: {
+        '/sign-in/email': { window: 60, max: 8 },
+        '/change-password': { window: 60, max: 5 }
+      }
+    },
     database: drizzleAdapter(getDatabase(), {
       provider: 'pg',
       schema: {
@@ -49,6 +59,7 @@ function createAuth() {
       }
     },
     advanced: {
+      cookiePrefix: 'xinzhi',
       database: {
         generateId: () => crypto.randomUUID()
       }

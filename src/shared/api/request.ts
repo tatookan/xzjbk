@@ -1,3 +1,5 @@
+import { getServerEnv } from '@/shared/config/server-env';
+
 import { AppError } from './errors';
 
 export async function readJson(request: Request): Promise<unknown> {
@@ -9,12 +11,15 @@ export async function readJson(request: Request): Promise<unknown> {
 }
 
 export function assertTrustedOrigin(request: Request): void {
+  if (request.headers.get('sec-fetch-site') === 'cross-site') {
+    throw new AppError('FORBIDDEN', '请求来源不受信任', 403);
+  }
+
   const origin = request.headers.get('origin');
   if (!origin) return;
 
   try {
-    const expectedOrigin = new URL(process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000')
-      .origin;
+    const expectedOrigin = new URL(getServerEnv().NEXT_PUBLIC_APP_URL).origin;
     if (new URL(origin).origin !== expectedOrigin) {
       throw new AppError('FORBIDDEN', '请求来源不受信任', 403);
     }

@@ -43,6 +43,7 @@ npm run lint
 npm run format:check
 npm run build
 npm run db:check
+npm run deploy:smoke
 ```
 
 数据库结构变更使用版本迁移：
@@ -112,5 +113,7 @@ src/
 ## 部署
 
 门户可直接构建；带私有文件和数据库的完整服务推荐自托管。Docker 镜像内的本地存储目录是 `/data/xinzhi-storage`，部署时必须挂载持久卷。
+
+生产环境使用 `compose.production.yaml`，数据库迁移、生产配置自检、健康检查、数据库与私有文件备份均已独立配置。完整上线、备份和恢复步骤见 [部署手册](./docs/DEPLOYMENT.md)。支付宝适配器完成之前，生产自检会强制要求 `PAYMENT_DRIVER=disabled`。
 
 本项目基于 MIT 许可的 `next-shadcn-dashboard-starter` 演进，原始许可见 [LICENSE](./LICENSE)。

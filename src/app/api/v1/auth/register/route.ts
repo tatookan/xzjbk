@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { registerWithInvite } from '@/modules/identity/invite-code';
 import { withApiHandler } from '@/shared/api/handler';
 import { assertTrustedOrigin, readJson } from '@/shared/api/request';
+import { assertRateLimit, getClientAddress } from '@/shared/security/rate-limit';
 
 const registrationSchema = z.object({
   name: z.string().trim().min(2, '姓名至少需要 2 个字符').max(50),
@@ -15,6 +16,12 @@ const registrationSchema = z.object({
 export function POST(request: Request) {
   return withApiHandler(request, async () => {
     assertTrustedOrigin(request);
+    assertRateLimit({
+      scope: 'invite-registration',
+      key: getClientAddress(request),
+      max: 8,
+      windowMs: 15 * 60 * 1000
+    });
     const input = registrationSchema.parse(await readJson(request));
     const passwordHash = await hashPassword(input.password);
     const user = await registerWithInvite({ ...input, passwordHash });
