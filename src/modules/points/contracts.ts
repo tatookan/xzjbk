@@ -32,4 +32,5 @@ export interface RechargePlanDto {
 export interface AccountPointsDto {
   user: PointsUserDto;
   ledger: PointLedgerDto[];
+  purchasedScriptIds: string[];
 }

@@ -16,6 +16,7 @@ type ReaderMode = 'bilingual' | 'en' | 'zh';
 
 interface DeliveryFile {
   number: string;
+  kind: 'script' | 'bilingual' | 'chinese' | 'director-statement';
   label: string;
   detail: string;
   filename: string;
@@ -34,12 +35,14 @@ function getDeliveryFiles(script: DemoScript): DeliveryFile[] {
   return [
     {
       number: '01',
+      kind: 'script',
       label: parallelProduction ? '英文制作稿' : '英文剧本',
       detail: parallelProduction ? '保留完整制作标记的英文原稿' : '纯英文成片剧本',
       filename: script.deliverables.script
     },
     {
       number: '02',
+      kind: parallelProduction ? 'chinese' : 'bilingual',
       label: parallelProduction ? '中文制作稿' : '中英对照剧本',
       detail: parallelProduction ? '与英文稿按集号、场号对应' : '英文与中文逐条对应',
       filename: parallelProduction
@@ -48,6 +51,7 @@ function getDeliveryFiles(script: DemoScript): DeliveryFile[] {
     },
     {
       number: '03',
+      kind: 'director-statement',
       label: '导演阐述',
       detail: '创作、人物与视觉执行标准',
       filename: script.deliverables.directorStatement
@@ -151,14 +155,13 @@ function DeliveryManifest({ script, purchased }: { script: DemoScript; purchased
                 {purchased ? file.filename : file.detail}
               </p>
               {purchased ? (
-                <button
-                  type='button'
-                  onClick={() => toast.success(`UI 演示：准备下载 ${file.filename}`)}
+                <a
+                  href={`/api/v1/scripts/${script.id}/files/${file.kind}`}
                   className='grid size-9 place-items-center border border-white/12 text-white/44 transition-colors hover:border-[#d84a3f] hover:text-[#d84a3f]'
                   aria-label={`下载${file.label}`}
                 >
                   <Icons.externalLink size={14} />
-                </button>
+                </a>
               ) : (
                 <Icons.lock className='text-white/22' size={14} />
               )}
@@ -183,6 +186,7 @@ export function ScriptDetail() {
     loadScript
   } = useScriptLibraryDemo();
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [purchasing, setPurchasing] = useState(false);
   const [readerMode, setReaderMode] = useState<ReaderMode>('bilingual');
   const [directorSectionId, setDirectorSectionId] = useState('concept');
   const [loadedScript, setLoadedScript] = useState<DemoScript | null>(null);
@@ -244,11 +248,16 @@ export function ScriptDetail() {
   const activeDirectorSection =
     script.directorSections?.find((section) => section.id === directorSectionId) ??
     script.directorSections?.[0];
-  const handlePurchase = () => {
-    const result = purchaseScript(script.id);
-    setConfirmOpen(false);
-    if (result.ok) toast.success(result.message);
-    else toast.error(result.message);
+  const handlePurchase = async () => {
+    setPurchasing(true);
+    const result = await purchaseScript(script.id);
+    setPurchasing(false);
+    if (result.ok) {
+      setConfirmOpen(false);
+      toast.success(result.message);
+    } else {
+      toast.error(result.message);
+    }
   };
 
   return (
@@ -669,9 +678,10 @@ export function ScriptDetail() {
             <button
               type='button'
               onClick={handlePurchase}
-              className='h-11 flex-1 bg-[#d84a3f] font-semibold text-[#130f0f]'
+              disabled={purchasing}
+              className='h-11 flex-1 bg-[#d84a3f] font-semibold text-[#130f0f] disabled:cursor-wait disabled:opacity-55'
             >
-              确认购买
+              {purchasing ? '正在锁定剧本…' : '确认购买'}
             </button>
           </div>
         </div>

@@ -7,6 +7,7 @@ import {
   auditLogs,
   mediaAssets,
   scriptFiles,
+  scriptOrders,
   scriptPreviews,
   scripts
 } from '@/infrastructure/database/schema';
@@ -145,16 +146,31 @@ export async function listAdminScripts(): Promise<CatalogScriptDto[]> {
 
 export async function getScriptDetail(
   id: string,
-  role: 'member' | 'admin'
+  role: 'member' | 'admin',
+  userId?: string
 ): Promise<CatalogScriptDto> {
   const [row] = await selectScriptRows().where(
     and(eq(scripts.id, id), ne(scripts.status, 'archived'), isNull(mediaAssets.deletedAt))
   );
   if (!row) throw new AppError('NOT_FOUND', '剧本不存在', 404);
+  let ownsScript = false;
   if (role !== 'admin' && row.script.status !== 'available') {
-    throw new AppError('NOT_FOUND', '该剧本已经售出或暂不可查看', 404);
+    if (row.script.status === 'sold' && userId) {
+      const [order] = await getDatabase()
+        .select({ id: scriptOrders.id })
+        .from(scriptOrders)
+        .where(
+          and(
+            eq(scriptOrders.scriptId, id),
+            eq(scriptOrders.buyerUserId, userId),
+            eq(scriptOrders.status, 'completed')
+          )
+        );
+      ownsScript = Boolean(order);
+    }
+    if (!ownsScript) throw new AppError('NOT_FOUND', '该剧本已经售出或暂不可查看', 404);
   }
-  return hydrateDetail(row, role === 'admin');
+  return hydrateDetail(row, role === 'admin' || ownsScript);
 }
 
 function assetRecord(asset: PreparedCatalogAsset, actorUserId: string) {

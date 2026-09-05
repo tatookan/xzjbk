@@ -35,7 +35,11 @@ export function AccountScreen() {
       .then(async ([accountResponse, plansResponse]) => {
         const accountPayload = (await accountResponse.json()) as {
           success: boolean;
-          data?: { user: DemoUser; ledger: PointLedgerEntry[] };
+          data?: {
+            user: DemoUser;
+            ledger: PointLedgerEntry[];
+            purchasedScriptIds: string[];
+          };
           error?: { message?: string };
         };
         const plansPayload = (await plansResponse.json()) as {

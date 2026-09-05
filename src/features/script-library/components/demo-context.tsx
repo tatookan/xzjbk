@@ -1,6 +1,5 @@
 'use client';
 
-import { initialOrders } from '@/features/script-library/api/demo-admin-data';
 import type {
   DemoOrder,
   DemoRole,
@@ -25,10 +24,12 @@ interface ScriptLibraryDemoContextValue {
   usersLoading: boolean;
   usersError: string;
   orders: DemoOrder[];
+  ordersLoading: boolean;
+  ordersError: string;
   purchasedIds: string[];
   scriptsLoading: boolean;
   logout: () => Promise<void>;
-  purchaseScript: (scriptId: string) => PurchaseResult;
+  purchaseScript: (scriptId: string) => Promise<PurchaseResult>;
   adjustPoints: (userId: string, amount: number, note: string) => Promise<PurchaseResult>;
   createScript: (formData: FormData) => Promise<PurchaseResult>;
   loadScript: (scriptId: string) => Promise<DemoScript | null>;
@@ -49,8 +50,11 @@ export function ScriptLibraryDemoProvider({ children }: { children: React.ReactN
   const [users, setUsers] = useState<DemoUser[]>([]);
   const [usersLoading, setUsersLoading] = useState(true);
   const [usersError, setUsersError] = useState('');
-  const [orders] = useState(initialOrders);
+  const [orders, setOrders] = useState<DemoOrder[]>([]);
+  const [ordersLoading, setOrdersLoading] = useState(true);
+  const [ordersError, setOrdersError] = useState('');
   const [purchasedIds, setPurchasedIds] = useState<string[]>([]);
+  const [pointsOverride, setPointsOverride] = useState<number | null>(null);
 
   const role: DemoRole = session?.user.role ?? 'guest';
   const currentUser: DemoUser | null = session
@@ -58,7 +62,7 @@ export function ScriptLibraryDemoProvider({ children }: { children: React.ReactN
         id: session.user.id,
         name: session.user.name,
         email: session.user.email,
-        points: session.user.pointsBalance,
+        points: pointsOverride ?? session.user.pointsBalance,
         role: session.user.role
       }
     : null;
@@ -80,6 +84,52 @@ export function ScriptLibraryDemoProvider({ children }: { children: React.ReactN
       .finally(() => {
         if (active) setScriptsLoading(false);
       });
+    return () => {
+      active = false;
+    };
+  }, [authPending, role]);
+
+  useEffect(() => {
+    if (authPending || role !== 'admin') return;
+    let active = true;
+    fetch('/api/v1/admin/orders', { cache: 'no-store' })
+      .then(async (response) => {
+        const payload = (await response.json()) as {
+          success: boolean;
+          data?: { items: DemoOrder[] };
+        };
+        if (active && response.ok && payload.success && payload.data) {
+          setOrders(payload.data.items);
+        } else if (active) {
+          setOrdersError('订单读取失败');
+        }
+      })
+      .catch(() => {
+        if (active) setOrdersError('当前无法连接订单服务');
+      })
+      .finally(() => {
+        if (active) setOrdersLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [authPending, role]);
+
+  useEffect(() => {
+    if (authPending || role !== 'member') return;
+    let active = true;
+    fetch('/api/v1/account', { cache: 'no-store' })
+      .then(async (response) => {
+        const payload = (await response.json()) as {
+          success: boolean;
+          data?: { user: DemoUser; purchasedScriptIds: string[] };
+        };
+        if (active && response.ok && payload.success && payload.data) {
+          setPurchasedIds(payload.data.purchasedScriptIds);
+          setPointsOverride(payload.data.user.points);
+        }
+      })
+      .catch(() => undefined);
     return () => {
       active = false;
     };
@@ -111,7 +161,7 @@ export function ScriptLibraryDemoProvider({ children }: { children: React.ReactN
     };
   }, [authPending, role]);
 
-  const purchaseScript = (scriptId: string): PurchaseResult => {
+  const purchaseScript = async (scriptId: string): Promise<PurchaseResult> => {
     if (role !== 'member' || !currentUser) {
       return { ok: false, message: '请先登录白名单账号' };
     }
@@ -119,7 +169,32 @@ export function ScriptLibraryDemoProvider({ children }: { children: React.ReactN
     if (!script || script.status !== 'available') {
       return { ok: false, message: '该剧本已售出或暂不可购买' };
     }
-    return { ok: false, message: '购买功能将在交易阶段接入，当前请联系管理员' };
+    try {
+      const response = await fetch(`/api/v1/scripts/${scriptId}/purchase`, { method: 'POST' });
+      const payload = (await response.json()) as {
+        success: boolean;
+        data?: {
+          script: DemoScript;
+          balanceAfter: number;
+          alreadyOwned: boolean;
+        };
+        error?: { message?: string };
+      };
+      if (!response.ok || !payload.success || !payload.data) {
+        return { ok: false, message: payload.error?.message ?? '购买未完成' };
+      }
+      setScripts((items) =>
+        items.map((item) => (item.id === scriptId ? payload.data!.script : item))
+      );
+      setPurchasedIds((items) => (items.includes(scriptId) ? items : [...items, scriptId]));
+      setPointsOverride(payload.data.balanceAfter);
+      return {
+        ok: true,
+        message: payload.data.alreadyOwned ? '该剧本已经在你的资产中' : '购买成功，交付文件已解锁'
+      };
+    } catch {
+      return { ok: false, message: '当前无法连接交易服务' };
+    }
   };
 
   const adjustPoints = async (
@@ -277,6 +352,8 @@ export function ScriptLibraryDemoProvider({ children }: { children: React.ReactN
     usersLoading,
     usersError,
     orders,
+    ordersLoading,
+    ordersError,
     purchasedIds,
     scriptsLoading,
     logout,

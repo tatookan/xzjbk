@@ -105,9 +105,14 @@ export interface RechargePlan {
 
 export interface DemoOrder {
   id: string;
+  orderNo: string;
+  scriptId: string;
   scriptTitle: string;
+  buyerUserId: string;
   buyer: string;
+  buyerEmail: string;
   amount: number;
-  status: 'completed';
+  status: 'pending' | 'completed' | 'cancelled' | 'refunded';
   createdAt: string;
+  completedAt: string | null;
 }

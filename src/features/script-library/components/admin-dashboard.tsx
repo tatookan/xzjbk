@@ -113,6 +113,8 @@ export function AdminDashboard() {
     usersLoading,
     usersError,
     orders,
+    ordersLoading,
+    ordersError,
     adjustPoints,
     deleteScript
   } = useScriptLibraryDemo();
@@ -358,7 +360,7 @@ export function AdminDashboard() {
                   >
                     <div>
                       <p className='text-sm'>{order.scriptTitle}</p>
-                      <p className='mt-1 text-xs text-white/32'>{order.id}</p>
+                      <p className='mt-1 text-xs text-white/32'>{order.orderNo}</p>
                     </div>
                     <p className='hidden self-center text-sm text-white/48 sm:block'>
                       {order.buyer}
@@ -368,6 +370,9 @@ export function AdminDashboard() {
                     </p>
                   </div>
                 ))}
+                {!ordersLoading && !orders.length ? (
+                  <div className='p-8 text-center text-sm text-white/30'>还没有成交订单</div>
+                ) : null}
               </div>
             </section>
             <section>
@@ -742,15 +747,31 @@ export function AdminDashboard() {
                 </tr>
               </thead>
               <tbody>
+                {ordersLoading ? (
+                  <tr>
+                    <td colSpan={5} className='px-5 py-12' aria-label='正在读取剧本订单'>
+                      <div className='h-12 animate-pulse bg-white/[0.035]' />
+                    </td>
+                  </tr>
+                ) : null}
                 {orders.map((order) => (
                   <tr key={order.id} className='border-b border-white/8 last:border-b-0'>
-                    <td className='px-5 py-4 font-mono text-xs text-white/36'>{order.id}</td>
+                    <td className='px-5 py-4 font-mono text-xs text-white/36'>{order.orderNo}</td>
                     <td className='px-5 py-4'>{order.scriptTitle}</td>
                     <td className='px-5 py-4 text-white/52'>{order.buyer}</td>
                     <td className='px-5 py-4 tabular-nums'>{order.amount.toLocaleString()}</td>
-                    <td className='px-5 py-4 text-xs text-white/34'>{order.createdAt}</td>
+                    <td className='px-5 py-4 text-xs text-white/34'>
+                      {new Date(order.completedAt ?? order.createdAt).toLocaleString('zh-CN')}
+                    </td>
                   </tr>
                 ))}
+                {!ordersLoading && !orders.length ? (
+                  <tr>
+                    <td colSpan={5} className='px-5 py-14 text-center text-sm text-white/34'>
+                      {ordersError || '还没有成交订单'}
+                    </td>
+                  </tr>
+                ) : null}
               </tbody>
             </table>
           </div>

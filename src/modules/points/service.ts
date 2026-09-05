@@ -1,7 +1,13 @@
-import { asc, desc, eq } from 'drizzle-orm';
+import { and, asc, desc, eq } from 'drizzle-orm';
 
 import { getDatabase } from '@/infrastructure/database/client';
-import { auditLogs, pointLedger, rechargePlans, users } from '@/infrastructure/database/schema';
+import {
+  auditLogs,
+  pointLedger,
+  rechargePlans,
+  scriptOrders,
+  users
+} from '@/infrastructure/database/schema';
 import { AppError } from '@/shared/api/errors';
 
 import type { AccountPointsDto, PointLedgerDto, PointsUserDto, RechargePlanDto } from './contracts';
@@ -63,7 +69,15 @@ export async function getAccountPoints(userId: string): Promise<AccountPointsDto
     .where(eq(pointLedger.userId, userId))
     .orderBy(desc(pointLedger.createdAt))
     .limit(30);
-  return { user: userDto(user), ledger: entries.map(ledgerDto) };
+  const purchases = await database
+    .select({ scriptId: scriptOrders.scriptId })
+    .from(scriptOrders)
+    .where(and(eq(scriptOrders.buyerUserId, userId), eq(scriptOrders.status, 'completed')));
+  return {
+    user: userDto(user),
+    ledger: entries.map(ledgerDto),
+    purchasedScriptIds: purchases.map((purchase) => purchase.scriptId)
+  };
 }
 
 export async function listPointsUsers(): Promise<PointsUserDto[]> {
