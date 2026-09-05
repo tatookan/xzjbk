@@ -84,12 +84,3 @@ export interface DemoOrder {
   status: 'completed';
   createdAt: string;
 }
-
-export interface DemoRecharge {
-  id: string;
-  user: string;
-  amount: number;
-  points: number;
-  status: 'paid' | 'pending';
-  createdAt: string;
-}

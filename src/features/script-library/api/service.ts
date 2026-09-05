@@ -1,4 +1,4 @@
-import type { DemoOrder, DemoRecharge, DemoScript, DemoUser } from './types';
+import type { DemoOrder, DemoScript, DemoUser } from './types';
 
 export const initialScripts: DemoScript[] = [
   {
@@ -510,24 +510,5 @@ export const initialOrders: DemoOrder[] = [
     amount: 2720,
     status: 'completed',
     createdAt: '2026-09-04 10:26'
-  }
-];
-
-export const initialRecharges: DemoRecharge[] = [
-  {
-    id: 'PAY-260904-031',
-    user: '沈予安',
-    amount: 500,
-    points: 5000,
-    status: 'paid',
-    createdAt: '2026-09-04 09:42'
-  },
-  {
-    id: 'PAY-260904-029',
-    user: '梁墨',
-    amount: 200,
-    points: 2000,
-    status: 'pending',
-    createdAt: '2026-09-04 08:15'
   }
 ];

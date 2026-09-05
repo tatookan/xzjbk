@@ -6,7 +6,8 @@ const serverEnvSchema = z.object({
   INVITE_CODE_PEPPER: z.string().min(32).optional(),
   STORAGE_DRIVER: z.enum(['local', 'oss']).default('local'),
   STORAGE_LOCAL_ROOT: z.string().min(1).default('./var/storage'),
-  MAX_UPLOAD_BYTES: z.coerce.number().int().positive().default(52_428_800)
+  MAX_UPLOAD_BYTES: z.coerce.number().int().positive().default(52_428_800),
+  PAYMENT_DRIVER: z.enum(['disabled', 'alipay']).default('disabled')
 });
 
 export type ServerEnv = z.infer<typeof serverEnvSchema>;
@@ -20,7 +21,8 @@ export function getServerEnv(): ServerEnv {
     INVITE_CODE_PEPPER: process.env.INVITE_CODE_PEPPER || undefined,
     STORAGE_DRIVER: process.env.STORAGE_DRIVER,
     STORAGE_LOCAL_ROOT: process.env.STORAGE_LOCAL_ROOT,
-    MAX_UPLOAD_BYTES: process.env.MAX_UPLOAD_BYTES
+    MAX_UPLOAD_BYTES: process.env.MAX_UPLOAD_BYTES,
+    PAYMENT_DRIVER: process.env.PAYMENT_DRIVER
   });
 
   return cachedEnv;

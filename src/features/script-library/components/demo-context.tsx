@@ -1,14 +1,8 @@
 'use client';
 
-import {
-  initialOrders,
-  initialRecharges,
-  initialScripts,
-  initialUsers
-} from '@/features/script-library/api/service';
+import { initialOrders, initialScripts, initialUsers } from '@/features/script-library/api/service';
 import type {
   DemoOrder,
-  DemoRecharge,
   DemoRole,
   DemoScript,
   DemoUser,
@@ -52,12 +46,9 @@ interface ScriptLibraryDemoContextValue {
   scripts: DemoScript[];
   users: DemoUser[];
   orders: DemoOrder[];
-  recharges: DemoRecharge[];
   purchasedIds: string[];
   logout: () => Promise<void>;
   purchaseScript: (scriptId: string) => PurchaseResult;
-  recharge: (amount: number) => void;
-  syncRecharge: (rechargeId: string) => PurchaseResult;
   adjustPoints: (userId: string, amount: number) => void;
   setUserDiscount: (userId: string, discount: number) => void;
   uploadScript: (input: UploadScriptInput) => void;
@@ -76,7 +67,6 @@ export function ScriptLibraryDemoProvider({ children }: { children: React.ReactN
   const [scripts, setScripts] = useState(initialScripts);
   const [users, setUsers] = useState(initialUsers);
   const [orders, setOrders] = useState(initialOrders);
-  const [recharges, setRecharges] = useState(initialRecharges);
   const [purchasedIds, setPurchasedIds] = useState<string[]>([]);
 
   const role: DemoRole = session?.user.role ?? 'guest';
@@ -101,7 +91,7 @@ export function ScriptLibraryDemoProvider({ children }: { children: React.ReactN
     }
     const finalPrice = Math.round((script.price * currentUser.discount) / 100);
     if (currentUser.points < finalPrice) {
-      return { ok: false, message: '积分不足，请先充值' };
+      return { ok: false, message: '积分不足，请联系管理员补充积分' };
     }
 
     setUsers((items) =>
@@ -125,42 +115,6 @@ export function ScriptLibraryDemoProvider({ children }: { children: React.ReactN
       ...items
     ]);
     return { ok: true, message: '购买完成，剧本已加入我的剧本' };
-  };
-
-  const recharge = (amount: number) => {
-    const points = amount * 10;
-    setUsers((items) =>
-      items.map((item) =>
-        item.id === 'user-shen' ? { ...item, points: item.points + points } : item
-      )
-    );
-    setRecharges((items) => [
-      {
-        id: `PAY-DEMO-${String(items.length + 1).padStart(3, '0')}`,
-        user: '沈予安',
-        amount,
-        points,
-        status: 'paid',
-        createdAt: '刚刚'
-      },
-      ...items
-    ]);
-  };
-
-  const syncRecharge = (rechargeId: string): PurchaseResult => {
-    const target = recharges.find((item) => item.id === rechargeId);
-    if (!target || target.status !== 'pending') {
-      return { ok: false, message: '该支付单已经处理或不存在' };
-    }
-    setRecharges((items) =>
-      items.map((item) => (item.id === rechargeId ? { ...item, status: 'paid' } : item))
-    );
-    setUsers((items) =>
-      items.map((user) =>
-        user.name === target.user ? { ...user, points: user.points + target.points } : user
-      )
-    );
-    return { ok: true, message: `支付状态已同步，${target.points.toLocaleString()} 积分已到账` };
   };
 
   const adjustPoints = (userId: string, amount: number) => {
@@ -268,12 +222,9 @@ export function ScriptLibraryDemoProvider({ children }: { children: React.ReactN
     scripts,
     users,
     orders,
-    recharges,
     purchasedIds,
     logout,
     purchaseScript,
-    recharge,
-    syncRecharge,
     adjustPoints,
     setUserDiscount,
     uploadScript,

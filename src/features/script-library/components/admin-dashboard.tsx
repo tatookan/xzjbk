@@ -7,6 +7,7 @@ import { DemoModal } from '@/features/script-library/components/demo-modal';
 import { useScriptLibraryDemo } from '@/features/script-library/components/demo-context';
 import { ScriptUploadFlow } from '@/features/script-library/components/script-upload-flow';
 import { ScriptEditor } from '@/features/script-library/components/script-editor';
+import { ShowcaseManager } from '@/features/script-library/components/showcase-manager';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -14,7 +15,14 @@ import type { FormEvent } from 'react';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
-type AdminSection = 'overview' | 'scripts' | 'users' | 'invites' | 'orders' | 'recharges';
+type AdminSection =
+  | 'overview'
+  | 'showcase'
+  | 'scripts'
+  | 'users'
+  | 'invites'
+  | 'orders'
+  | 'recharges';
 
 interface AdminInvite {
   id: string;
@@ -29,11 +37,12 @@ interface AdminInvite {
 
 const navItems: { id: AdminSection; label: string; icon: Icon }[] = [
   { id: 'overview', label: '经营概览', icon: Icons.dashboard },
+  { id: 'showcase', label: '首页海报', icon: Icons.media },
   { id: 'scripts', label: '剧本管理', icon: Icons.post },
   { id: 'users', label: '用户与积分', icon: Icons.teams },
   { id: 'invites', label: '注册码', icon: Icons.lock },
   { id: 'orders', label: '剧本订单', icon: Icons.billing },
-  { id: 'recharges', label: '充值记录', icon: Icons.creditCard }
+  { id: 'recharges', label: '支付预留', icon: Icons.creditCard }
 ];
 
 const statusStyle = {
@@ -101,10 +110,8 @@ export function AdminDashboard() {
     scripts,
     users,
     orders,
-    recharges,
     adjustPoints,
     setUserDiscount,
-    syncRecharge,
     deleteScript
   } = useScriptLibraryDemo();
   const [section, setSection] = useState<AdminSection>('overview');
@@ -184,9 +191,6 @@ export function AdminDashboard() {
   const soldCount = scripts.filter((script) => script.status === 'sold').length;
   const availableCount = scripts.filter((script) => script.status === 'available').length;
   const draftCount = scripts.filter((script) => script.status === 'draft').length;
-  const paidRecharge = recharges
-    .filter((item) => item.status === 'paid')
-    .reduce((sum, item) => sum + item.amount, 0);
   const filteredScripts = scripts.filter((script) => {
     const keyword = scriptQuery.trim().toLowerCase();
     const matchesKeyword =
@@ -253,12 +257,6 @@ export function AdminDashboard() {
     }
   };
 
-  const handleRechargeSync = (rechargeId: string) => {
-    const result = syncRecharge(rechargeId);
-    if (result.ok) toast.success(result.message);
-    else toast.error(result.message);
-  };
-
   const confirmScriptDelete = () => {
     if (!deletingScript) return;
     const result = deleteScript(deletingScript.id);
@@ -301,9 +299,9 @@ export function AdminDashboard() {
               className='xl:col-span-4'
             />
             <Metric
-              label='演示充值额'
-              value={`¥${paidRecharge.toLocaleString()}`}
-              note='支付宝电脑网站支付'
+              label='支付接口'
+              value='预留'
+              note='支付宝暂未接入，不产生支付单'
               className='xl:col-span-3'
             />
           </div>
@@ -352,11 +350,7 @@ export function AdminDashboard() {
                     `${invites.filter((invite) => invite.status === 'unused').length} 个注册码可用`,
                     '按需生成，一人一码'
                   ],
-                  [
-                    'recharges',
-                    `${recharges.filter((item) => item.status === 'pending').length} 笔充值待同步`,
-                    '核对支付宝到账结果'
-                  ],
+                  ['recharges', '支付宝接口已预留', '暂不开放充值，不产生模拟订单'],
                   [
                     'users',
                     `${users.filter((user) => user.role === 'member' && user.points < 3000).length} 位用户积分偏低`,
@@ -382,6 +376,10 @@ export function AdminDashboard() {
           </div>
         </>
       );
+    }
+
+    if (section === 'showcase') {
+      return <ShowcaseManager />;
     }
 
     if (section === 'scripts') {
@@ -718,57 +716,37 @@ export function AdminDashboard() {
 
     return (
       <>
-        <SectionHeading eyebrow='Alipay records' title='充值记录' />
-        <div className='overflow-x-auto border border-white/10'>
-          <table className='w-full min-w-[760px] text-left text-sm'>
-            <thead className='border-b border-white/10 bg-white/[0.025] text-xs text-white/34'>
-              <tr>
-                <th className='px-5 py-4 font-normal'>支付单号</th>
-                <th className='px-5 py-4 font-normal'>用户</th>
-                <th className='px-5 py-4 font-normal'>金额</th>
-                <th className='px-5 py-4 font-normal'>到账积分</th>
-                <th className='px-5 py-4 font-normal'>状态</th>
-                <th className='px-5 py-4 font-normal'>时间</th>
-                <th className='px-5 py-4 text-right font-normal'>操作</th>
-              </tr>
-            </thead>
-            <tbody>
-              {recharges.map((item) => (
-                <tr key={item.id} className='border-b border-white/8 last:border-b-0'>
-                  <td className='px-5 py-4 font-mono text-xs text-white/36'>{item.id}</td>
-                  <td className='px-5 py-4'>{item.user}</td>
-                  <td className='px-5 py-4 tabular-nums'>¥{item.amount}</td>
-                  <td className='px-5 py-4 tabular-nums'>{item.points.toLocaleString()}</td>
-                  <td className='px-5 py-4'>
-                    <span
-                      className={cn(
-                        'px-2 py-1 text-xs',
-                        item.status === 'paid'
-                          ? 'bg-emerald-500/10 text-emerald-300'
-                          : 'bg-amber-500/10 text-amber-300'
-                      )}
-                    >
-                      {item.status === 'paid' ? '已到账' : '待确认'}
+        <SectionHeading eyebrow='Payment integration' title='支付系统预留' />
+        <div className='grid gap-5 lg:grid-cols-[1.1fr_0.9fr]'>
+          <section className='border border-white/10 bg-white/[0.025] p-6 sm:p-8'>
+            <div className='flex items-start justify-between gap-6'>
+              <div>
+                <span className='inline-flex bg-white/8 px-2.5 py-1 text-[10px] text-white/44'>
+                  暂未接入
+                </span>
+                <h3 className='mt-5 font-serif text-3xl'>支付宝电脑网站支付</h3>
+                <p className='mt-4 max-w-xl text-sm leading-7 text-white/42'>
+                  当前不会创建充值订单，也不会出现模拟到账。以后接入时只需实现支付提供方适配器，不影响积分、订单和用户模块。
+                </p>
+              </div>
+              <Icons.creditCard className='shrink-0 text-[#d84a3f]' size={26} />
+            </div>
+          </section>
+          <section className='border border-white/10 p-6 sm:p-8'>
+            <p className='text-[10px] tracking-[0.18em] text-white/28 uppercase'>Reserved flow</p>
+            <ol className='mt-5 space-y-4 text-xs text-white/42'>
+              {['服务端创建支付单', '跳转支付宝电脑收银台', '验签回调并增加积分'].map(
+                (step, index) => (
+                  <li key={step} className='flex items-center gap-3'>
+                    <span className='grid size-6 place-items-center border border-white/12 font-mono text-[10px] text-[#d84a3f]'>
+                      {index + 1}
                     </span>
-                  </td>
-                  <td className='px-5 py-4 text-xs text-white/34'>{item.createdAt}</td>
-                  <td className='px-5 py-4 text-right'>
-                    {item.status === 'pending' ? (
-                      <button
-                        type='button'
-                        onClick={() => handleRechargeSync(item.id)}
-                        className='text-xs text-[#df675c] hover:text-[#ec7c72]'
-                      >
-                        同步支付宝状态
-                      </button>
-                    ) : (
-                      <span className='text-xs text-white/24'>已完成</span>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                    {step}
+                  </li>
+                )
+              )}
+            </ol>
+          </section>
         </div>
       </>
     );

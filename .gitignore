@@ -20,6 +20,8 @@ pnpm-lock.yaml
 # private local uploads (keep the directory marker only)
 /var/storage/*
 !/var/storage/.gitignore
+/var/postgres/
+/var/postgres.log
 
 # misc
 .DS_Store
