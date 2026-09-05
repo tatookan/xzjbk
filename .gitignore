@@ -17,6 +17,10 @@ pnpm-lock.yaml
 # production
 /build
 
+# private local uploads (keep the directory marker only)
+/var/storage/*
+!/var/storage/.gitignore
+
 # misc
 .DS_Store
 *.pem

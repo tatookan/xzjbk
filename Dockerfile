@@ -20,8 +20,9 @@ ENV NODE_ENV=production
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV STORAGE_LOCAL_ROOT=/data/xinzhi-storage
 COPY --from=builder --chown=node:node /app/public ./public
-RUN mkdir .next && chown node:node .next
+RUN mkdir .next /data/xinzhi-storage && chown node:node .next /data/xinzhi-storage
 COPY --from=builder --chown=node:node /app/.next/standalone ./
 COPY --from=builder --chown=node:node /app/.next/static ./.next/static
 USER node
