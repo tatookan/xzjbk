@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
 type ReaderMode = 'bilingual' | 'en' | 'zh';
@@ -172,17 +172,46 @@ function DeliveryManifest({ script, purchased }: { script: DemoScript; purchased
 
 export function ScriptDetail() {
   const params = useParams<{ id: string }>();
-  const { role, authPending, currentUser, scripts, purchasedIds, purchaseScript } =
-    useScriptLibraryDemo();
+  const {
+    role,
+    authPending,
+    currentUser,
+    scripts,
+    scriptsLoading,
+    purchasedIds,
+    purchaseScript,
+    loadScript
+  } = useScriptLibraryDemo();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [readerMode, setReaderMode] = useState<ReaderMode>('bilingual');
   const [directorSectionId, setDirectorSectionId] = useState('concept');
+  const [loadedScript, setLoadedScript] = useState<DemoScript | null>(null);
+  const [detailAttempted, setDetailAttempted] = useState(false);
 
-  if (authPending) {
+  const summaryScript = scripts.find((item) => item.id === params.id);
+
+  useEffect(() => {
+    if (authPending || role === 'guest' || !summaryScript || summaryScript.detailLoaded) return;
+    let active = true;
+    loadScript(params.id).then((result) => {
+      if (!active) return;
+      setLoadedScript(result);
+      setDetailAttempted(true);
+    });
+    return () => {
+      active = false;
+    };
+  }, [authPending, loadScript, params.id, role, summaryScript]);
+
+  if (
+    authPending ||
+    scriptsLoading ||
+    (role !== 'guest' && summaryScript && !summaryScript.detailLoaded && !detailAttempted)
+  ) {
     return <main className='min-h-screen bg-[#0c0d10]' />;
   }
 
-  const script = scripts.find((item) => item.id === params.id);
+  const script = loadedScript ?? summaryScript;
 
   if (!script)
     return (

@@ -1,0 +1,2 @@
+ALTER TABLE "scripts" ADD COLUMN "preview_visible_count" integer DEFAULT 1 NOT NULL;--> statement-breakpoint
+ALTER TABLE "scripts" ADD CONSTRAINT "scripts_preview_visible_positive" CHECK ("scripts"."preview_visible_count" > 0);

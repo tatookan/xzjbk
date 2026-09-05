@@ -45,6 +45,7 @@ export const scripts = pgTable(
     previewRationale: text('preview_rationale'),
     sourceUnitCount: integer('source_unit_count'),
     previewUnitLabel: text('preview_unit_label').notNull().default('场'),
+    previewVisibleCount: integer('preview_visible_count').notNull().default(1),
     presentationMode: presentationMode('presentation_mode').notNull(),
     packageMode: packageMode('package_mode').notNull(),
     pricePoints: integer('price_points').notNull(),
@@ -74,6 +75,7 @@ export const scripts = pgTable(
     index('scripts_status_published_idx').on(table.status, table.publishedAt),
     check('scripts_price_nonnegative', sql`${table.pricePoints} >= 0`),
     check('scripts_episodes_positive', sql`${table.episodes} > 0`),
+    check('scripts_preview_visible_positive', sql`${table.previewVisibleCount} > 0`),
     check('scripts_version_positive', sql`${table.version} > 0`)
   ]
 );

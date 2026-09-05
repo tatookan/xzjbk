@@ -89,7 +89,7 @@ function ScriptCard({ script }: { script: DemoScript }) {
 }
 
 export function LibraryHome() {
-  const { scripts, role } = useScriptLibraryDemo();
+  const { scripts, role, scriptsLoading } = useScriptLibraryDemo();
   const [query, setQuery] = useState('');
   const [genre, setGenre] = useState('全部');
   const genres = useMemo(
@@ -178,7 +178,17 @@ export function LibraryHome() {
           </div>
         </div>
 
-        {visibleScripts.length ? (
+        {scriptsLoading ? (
+          <div className='grid gap-x-5 gap-y-14 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'>
+            {[0, 1, 2, 3].map((item) => (
+              <div key={item} className='animate-pulse'>
+                <div className='aspect-[3/4.2] bg-white/[0.04]' />
+                <div className='mt-4 h-5 w-2/3 bg-white/[0.04]' />
+                <div className='mt-3 h-10 bg-white/[0.025]' />
+              </div>
+            ))}
+          </div>
+        ) : visibleScripts.length ? (
           <div className='grid gap-x-5 gap-y-14 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'>
             {visibleScripts.map((script) => (
               <ScriptCard key={script.id} script={script} />

@@ -46,6 +46,8 @@ export function ScriptEditor({ script, onClose }: { script: DemoScript; onClose:
         : (script.previewVisibleCount ?? script.preview.length)
     )
   );
+  const [cover, setCover] = useState<File | undefined>();
+  const [saving, setSaving] = useState(false);
   const files = getFiles(script);
 
   const updatePreviewRow = (id: string, field: 'zh' | 'en', value: string) => {
@@ -114,7 +116,7 @@ export function ScriptEditor({ script, onClose }: { script: DemoScript; onClose:
     );
   }
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const preview = previewRows.map(({ zh, en }) => ({ zh: zh.trim(), en: en.trim() }));
     if (preview.some((line) => !line.zh || !line.en)) {
@@ -122,7 +124,8 @@ export function ScriptEditor({ script, onClose }: { script: DemoScript; onClose:
       return;
     }
     const data = new FormData(event.currentTarget);
-    const result = updateScript({
+    setSaving(true);
+    const result = await updateScript({
       id: script.id,
       title: String(data.get('title') ?? ''),
       englishTitle: String(data.get('englishTitle') ?? ''),
@@ -132,12 +135,20 @@ export function ScriptEditor({ script, onClose }: { script: DemoScript; onClose:
       episodes: Number(data.get('episodes') ?? 0),
       logline: String(data.get('logline') ?? ''),
       synopsis: String(data.get('synopsis') ?? ''),
+      directorStatement: String(data.get('directorStatement') ?? ''),
+      tags: String(data.get('tags') ?? '')
+        .split(/[,，]/)
+        .map((tag) => tag.trim())
+        .filter(Boolean),
+      sourceUnitCount: Number(data.get('sourceUnitCount') ?? preview.length),
       previewRationale: String(data.get('previewRationale') ?? ''),
       preview,
       previewStructureChanged,
       previewAmount,
-      status
+      status,
+      cover
     });
+    setSaving(false);
     if (result.ok) {
       toast.success(result.message);
       onClose();
@@ -227,9 +238,29 @@ export function ScriptEditor({ script, onClose }: { script: DemoScript; onClose:
                 <input
                   name='episodes'
                   type='number'
-                  min='0'
+                  min='1'
                   required
                   defaultValue={script.episodes}
+                  className='mt-2 h-11 w-full border border-white/14 bg-white/[0.025] px-3 text-sm text-white outline-none focus:border-[#d84a3f]'
+                />
+              </label>
+              <label className='text-xs text-white/48'>
+                全文单元数
+                <input
+                  name='sourceUnitCount'
+                  type='number'
+                  min={previewRows.length}
+                  required
+                  defaultValue={script.sourceUnitCount ?? previewRows.length}
+                  className='mt-2 h-11 w-full border border-white/14 bg-white/[0.025] px-3 text-sm text-white outline-none focus:border-[#d84a3f]'
+                />
+              </label>
+              <label className='text-xs text-white/48'>
+                标签（逗号分隔）
+                <input
+                  name='tags'
+                  required
+                  defaultValue={script.tags.join(', ')}
                   className='mt-2 h-11 w-full border border-white/14 bg-white/[0.025] px-3 text-sm text-white outline-none focus:border-[#d84a3f]'
                 />
               </label>
@@ -243,6 +274,16 @@ export function ScriptEditor({ script, onClose }: { script: DemoScript; onClose:
                 rows={3}
                 defaultValue={script.logline}
                 className='mt-2 w-full resize-none border border-white/14 bg-white/[0.025] p-3 text-sm leading-6 text-white outline-none focus:border-[#d84a3f]'
+              />
+            </label>
+            <label className='mt-5 block text-xs text-white/48'>
+              导演阐述
+              <textarea
+                name='directorStatement'
+                required
+                rows={6}
+                defaultValue={script.directorStatement}
+                className='mt-2 w-full resize-y whitespace-pre-wrap border border-white/14 bg-white/[0.025] p-3 text-sm leading-7 text-white outline-none focus:border-[#d84a3f]'
               />
             </label>
             <label className='mt-5 block text-xs text-white/48'>
@@ -279,8 +320,9 @@ export function ScriptEditor({ script, onClose }: { script: DemoScript; onClose:
                     accept='image/jpeg,image/png,image/webp'
                     className='sr-only'
                     onChange={(event) => {
-                      const fileName = event.target.files?.[0]?.name;
-                      if (fileName) toast.info(`${fileName} 已选择，保存后生效`);
+                      const file = event.target.files?.[0];
+                      setCover(file);
+                      if (file) toast.info(`${file.name} 已选择，保存后生效`);
                     }}
                   />
                 </label>
@@ -450,9 +492,10 @@ export function ScriptEditor({ script, onClose }: { script: DemoScript; onClose:
             </button>
             <button
               type='submit'
-              className='h-11 bg-[#d84a3f] px-6 text-sm font-semibold text-[#130f0f] transition-colors hover:bg-[#df5b51] active:translate-y-px'
+              disabled={saving}
+              className='h-11 bg-[#d84a3f] px-6 text-sm font-semibold text-[#130f0f] transition-colors hover:bg-[#df5b51] active:translate-y-px disabled:cursor-wait disabled:opacity-55'
             >
-              保存并同步前台
+              {saving ? '正在保存…' : '保存并同步前台'}
             </button>
           </div>
         </div>

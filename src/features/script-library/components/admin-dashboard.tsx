@@ -257,9 +257,9 @@ export function AdminDashboard() {
     }
   };
 
-  const confirmScriptDelete = () => {
+  const confirmScriptDelete = async () => {
     if (!deletingScript) return;
-    const result = deleteScript(deletingScript.id);
+    const result = await deleteScript(deletingScript.id);
     if (result.ok) {
       toast.success(result.message);
       setDeletingScript(null);
@@ -887,7 +887,7 @@ export function AdminDashboard() {
               </button>
               <button
                 type='button'
-                onClick={confirmScriptDelete}
+                onClick={() => void confirmScriptDelete()}
                 className='inline-flex h-11 items-center gap-2 border border-[#d84a3f]/70 bg-[#d84a3f]/10 px-5 text-sm text-[#ec7c72] transition-colors hover:bg-[#d84a3f]/18 active:translate-y-px'
               >
                 <Icons.trash size={15} /> 确认删除

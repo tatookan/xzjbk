@@ -6,7 +6,7 @@ import { useScriptLibraryDemo } from '@/features/script-library/components/demo-
 import { DemoModal } from '@/features/script-library/components/demo-modal';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
-import { FormEvent, useState } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
 type UploadStep = 'files' | 'details';
@@ -14,7 +14,11 @@ type PackageMode = 'bilingual' | 'parallel';
 type FileKey = 'english' | 'secondary' | 'director';
 type PreviewRow = ScriptPreviewLine & { id: string };
 
-const emptyFiles: Record<FileKey, string> = { english: '', secondary: '', director: '' };
+const emptyFiles: Record<FileKey, File | null> = {
+  english: null,
+  secondary: null,
+  director: null
+};
 const emptyPreviewRow = (id: string): PreviewRow => ({
   id,
   zh: '',
@@ -138,39 +142,47 @@ const formatDefinitions = {
 >;
 
 export function ScriptUploadFlow({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const { uploadScript } = useScriptLibraryDemo();
+  const { createScript } = useScriptLibraryDemo();
   const [packageMode, setPackageMode] = useState<PackageMode>('bilingual');
   const [step, setStep] = useState<UploadStep>('files');
-  const [files, setFiles] = useState<Record<FileKey, string>>(emptyFiles);
-  const [coverName, setCoverName] = useState('');
+  const [files, setFiles] = useState<Record<FileKey, File | null>>(emptyFiles);
+  const [cover, setCover] = useState<File | null>(null);
+  const [coverPreview, setCoverPreview] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
   const [previewRows, setPreviewRows] = useState<PreviewRow[]>([
     emptyPreviewRow('preview-initial')
   ]);
   const definition = formatDefinitions[packageMode];
   const allFilesReady = Object.values(files).every(Boolean);
 
+  useEffect(() => {
+    return () => {
+      if (coverPreview) URL.revokeObjectURL(coverPreview);
+    };
+  }, [coverPreview]);
+
   const closeFlow = () => {
     setStep('files');
     setPackageMode('bilingual');
-    setFiles(emptyFiles);
-    setCoverName('');
+    setFiles({ ...emptyFiles });
+    setCover(null);
+    setCoverPreview(null);
     setPreviewRows([emptyPreviewRow('preview-reset')]);
     onClose();
   };
 
   const useSample = () => {
-    setFiles(definition.sampleFiles);
-    setCoverName(definition.sampleCoverName);
     setPreviewRows(
       definition.preview.map((line, index) => ({ ...line, id: `sample-${packageMode}-${index}` }))
     );
-    toast.info(`已填入${definition.label}演示资料`);
+    toast.info(`已填入${definition.label}演示文案，请继续选择真实文件和封面`);
   };
 
   const switchPackageMode = (nextMode: PackageMode) => {
     setPackageMode(nextMode);
-    setFiles(emptyFiles);
-    setCoverName('');
+    setFiles({ ...emptyFiles });
+    setCover(null);
+    setCoverPreview(null);
     setPreviewRows([emptyPreviewRow(`preview-${nextMode}`)]);
   };
 
@@ -178,13 +190,13 @@ export function ScriptUploadFlow({ open, onClose }: { open: boolean; onClose: ()
     setPreviewRows((rows) => rows.map((row) => (row.id === id ? { ...row, [field]: value } : row)));
   };
 
-  const handlePublish = (event: FormEvent<HTMLFormElement>) => {
+  const handlePublish = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const completedPreview = previewRows
       .map(({ zh, en }) => ({ zh: zh.trim(), en: en.trim() }))
       .filter((row) => row.zh && row.en);
 
-    if (!coverName) {
+    if (!cover) {
       toast.error('请上传剧本封面');
       return;
     }
@@ -194,35 +206,35 @@ export function ScriptUploadFlow({ open, onClose }: { open: boolean; onClose: ()
     }
 
     const data = new FormData(event.currentTarget);
-    const deliverables =
-      packageMode === 'parallel'
-        ? { script: files.english, chinese: files.secondary, directorStatement: files.director }
-        : { script: files.english, bilingual: files.secondary, directorStatement: files.director };
+    data.set(
+      'tags',
+      JSON.stringify(
+        String(data.get('tags') ?? '')
+          .split(/[,，]/)
+          .map((tag) => tag.trim())
+          .filter(Boolean)
+      )
+    );
+    data.set('preview', JSON.stringify(completedPreview));
+    data.set(
+      'packageMode',
+      packageMode === 'parallel' ? 'parallel-production' : 'bilingual-package'
+    );
+    data.set('status', 'draft');
+    data.set('cover', cover);
+    data.set('english', files.english!);
+    data.set('secondary', files.secondary!);
+    data.set('director', files.director!);
 
-    uploadScript({
-      title: String(data.get('title') ?? ''),
-      englishTitle: String(data.get('englishTitle') ?? ''),
-      genre: String(data.get('genre') ?? ''),
-      price: Number(data.get('price') ?? 0),
-      episodes: Number(data.get('episodes') ?? 0),
-      logline: String(data.get('logline') ?? ''),
-      synopsis: String(data.get('synopsis') ?? ''),
-      directorStatement: String(data.get('directorStatement') ?? ''),
-      previewRationale: String(data.get('previewRationale') ?? ''),
-      sourceUnitCount: Number(data.get('sourceUnitCount') ?? completedPreview.length),
-      previewUnitLabel: String(data.get('previewUnitLabel') ?? '段') as '段' | '场',
-      tags: String(data.get('tags') ?? '')
-        .split(/[,，]/)
-        .map((tag) => tag.trim())
-        .filter(Boolean),
-      preview: completedPreview,
-      image: definition.cover,
-      deliverables,
-      packageMode: packageMode === 'parallel' ? 'parallel-production' : 'bilingual-package',
-      presentationMode: String(data.get('presentationMode') ?? '演绎') as '解说' | '演绎'
-    });
+    setSaving(true);
+    const result = await createScript(data);
+    setSaving(false);
+    if (!result.ok) {
+      toast.error(result.message);
+      return;
+    }
+    toast.success(result.message);
     closeFlow();
-    toast.success('剧本已保存为草稿，展示内容与原文件已分别保存');
   };
 
   return (
@@ -308,7 +320,7 @@ export function ScriptUploadFlow({ open, onClose }: { open: boolean; onClose: ()
                   {slot.description}
                 </span>
                 <span className='mt-5 block truncate text-[10px] text-white/46'>
-                  {files[slot.key] || '选择 Word、TXT 或 Markdown'}
+                  {files[slot.key]?.name || '选择 Word、TXT 或 Markdown'}
                 </span>
                 <input
                   type='file'
@@ -317,7 +329,7 @@ export function ScriptUploadFlow({ open, onClose }: { open: boolean; onClose: ()
                   onChange={(event) =>
                     setFiles((current) => ({
                       ...current,
-                      [slot.key]: event.target.files?.[0]?.name ?? ''
+                      [slot.key]: event.target.files?.[0] ?? null
                     }))
                   }
                 />
@@ -337,7 +349,7 @@ export function ScriptUploadFlow({ open, onClose }: { open: boolean; onClose: ()
               onClick={useSample}
               className='h-10 border border-white/14 px-4 text-xs text-white/60 transition-colors hover:border-white/32 hover:text-white'
             >
-              载入{definition.label}演示资料
+              载入{definition.label}演示文案
             </button>
           </div>
 
@@ -422,7 +434,7 @@ export function ScriptUploadFlow({ open, onClose }: { open: boolean; onClose: ()
                   <input
                     name='episodes'
                     type='number'
-                    min='0'
+                    min='1'
                     required
                     defaultValue={definition.defaults.episodes}
                     className={inputClass}
@@ -485,9 +497,9 @@ export function ScriptUploadFlow({ open, onClose }: { open: boolean; onClose: ()
                 <p className='text-sm font-medium'>剧本封面</p>
                 <div className='mt-4 grid grid-cols-[92px_1fr] gap-4'>
                   <div className='relative aspect-[2/3] overflow-hidden bg-white/[0.03]'>
-                    {coverName ? (
+                    {coverPreview ? (
                       <Image
-                        src={definition.cover}
+                        src={coverPreview}
                         alt='剧本封面预览'
                         fill
                         className='object-cover'
@@ -500,17 +512,23 @@ export function ScriptUploadFlow({ open, onClose }: { open: boolean; onClose: ()
                     )}
                   </div>
                   <div className='min-w-0 py-1'>
-                    <p className='truncate text-xs text-white/52'>{coverName || '尚未选择封面'}</p>
+                    <p className='truncate text-xs text-white/52'>
+                      {cover?.name || '尚未选择封面'}
+                    </p>
                     <p className='mt-2 text-[10px] leading-5 text-white/28'>
                       建议竖版 2:3，JPG 或 PNG
                     </p>
                     <label className='mt-4 inline-flex cursor-pointer items-center gap-2 text-[10px] text-[#d9685e] hover:text-[#ec7c72]'>
-                      <Icons.upload size={13} /> {coverName ? '更换封面' : '上传封面'}
+                      <Icons.upload size={13} /> {cover ? '更换封面' : '上传封面'}
                       <input
                         type='file'
                         accept='image/jpeg,image/png,image/webp'
                         className='sr-only'
-                        onChange={(event) => setCoverName(event.target.files?.[0]?.name ?? '')}
+                        onChange={(event) => {
+                          const nextCover = event.target.files?.[0] ?? null;
+                          setCover(nextCover);
+                          setCoverPreview(nextCover ? URL.createObjectURL(nextCover) : null);
+                        }}
                       />
                     </label>
                   </div>
@@ -525,7 +543,9 @@ export function ScriptUploadFlow({ open, onClose }: { open: boolean; onClose: ()
                       <Icons.circleCheck size={15} className='text-[#d84a3f]' />
                       <div className='min-w-0'>
                         <p className='text-xs text-white/58'>{slot.label}</p>
-                        <p className='mt-1 truncate text-[10px] text-white/26'>{files[slot.key]}</p>
+                        <p className='mt-1 truncate text-[10px] text-white/26'>
+                          {files[slot.key]?.name}
+                        </p>
                       </div>
                     </div>
                   ))}
@@ -627,9 +647,10 @@ export function ScriptUploadFlow({ open, onClose }: { open: boolean; onClose: ()
               </button>
               <button
                 type='submit'
-                className='h-11 bg-[#d84a3f] px-6 text-sm font-semibold text-[#130f0f]'
+                disabled={saving}
+                className='h-11 bg-[#d84a3f] px-6 text-sm font-semibold text-[#130f0f] disabled:cursor-wait disabled:opacity-55'
               >
-                保存草稿并预览
+                {saving ? '正在安全保存…' : '保存草稿并预览'}
               </button>
             </div>
           </div>

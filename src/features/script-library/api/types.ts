@@ -48,6 +48,7 @@ export interface DemoScript {
     chinese?: string;
     directorStatement: string;
   };
+  detailLoaded?: boolean;
 }
 
 export interface ScriptAdminUpdate {
@@ -60,11 +61,15 @@ export interface ScriptAdminUpdate {
   episodes: number;
   logline: string;
   synopsis: string;
+  directorStatement: string;
+  tags: string[];
+  sourceUnitCount: number;
   previewRationale: string;
   preview: ScriptPreviewLine[];
   previewStructureChanged: boolean;
   previewAmount: number;
   status: Exclude<ScriptStatus, 'sold'>;
+  cover?: File;
 }
 
 export interface DemoUser {
