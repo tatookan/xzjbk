@@ -1,8 +1,13 @@
 import { clerkMiddleware } from '@clerk/nextjs/server';
+import { NextResponse } from 'next/server';
 
 // Route protection lives in the /dashboard layout via `auth.protect()`.
 // clerkMiddleware() only attaches the auth context to every request.
-export default clerkMiddleware();
+const proxy = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
+  ? clerkMiddleware()
+  : () => NextResponse.next();
+
+export default proxy;
 export const config = {
   matcher: [
     // Skip Next.js internals and all static files, unless found in search params
