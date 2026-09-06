@@ -2,6 +2,10 @@
 
 import { Icons } from '@/components/icons';
 import { useScriptLibraryDemo } from '@/features/script-library/components/demo-context';
+import {
+  HeartPointAmount,
+  HeartPointMark
+} from '@/features/script-library/components/heart-point-mark';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
@@ -84,9 +88,9 @@ export function LibraryHeader() {
           ) : role === 'member' && currentUser ? (
             <Link
               href='/account#recharge'
-              className='hidden text-xs tabular-nums text-white/62 transition-colors hover:text-white sm:block'
+              className='hidden text-xs text-white/62 transition-colors hover:text-white sm:block'
             >
-              {currentUser.points.toLocaleString()} 心源
+              <HeartPointAmount amount={currentUser.points} />
             </Link>
           ) : null}
           {role === 'guest' ? (
@@ -118,9 +122,11 @@ export function LibraryHeader() {
                     <p className='truncate text-sm font-medium text-white'>{currentUser.name}</p>
                     <p className='mt-1 truncate text-xs text-white/38'>{currentUser.email}</p>
                     {role === 'member' ? (
-                      <p className='mt-3 font-mono text-xs tabular-nums text-[#df675c]'>
-                        {currentUser.points.toLocaleString()} 心源
-                      </p>
+                      <HeartPointAmount
+                        amount={currentUser.points}
+                        className='mt-3 font-mono text-xs text-[#df675c]'
+                        nameClassName='font-sans text-white/38'
+                      />
                     ) : null}
                   </div>
 
@@ -133,7 +139,7 @@ export function LibraryHeader() {
                           onClick={() => setAccountMenuOpen(false)}
                           className='flex items-center gap-3 px-3 py-2.5 text-sm text-white/62 transition-colors hover:bg-white/5 hover:text-white'
                         >
-                          <Icons.coins size={16} stroke={1.6} /> 充值心源
+                          <HeartPointMark size='sm' /> 充值心源
                         </Link>
                         <Link
                           role='menuitem'

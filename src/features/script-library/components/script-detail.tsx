@@ -5,6 +5,7 @@ import type { DemoScript } from '@/features/script-library/api/types';
 import { DemoModal } from '@/features/script-library/components/demo-modal';
 import { useScriptLibraryDemo } from '@/features/script-library/components/demo-context';
 import { LibraryHeader } from '@/features/script-library/components/library-header';
+import { HeartPointAmount } from '@/features/script-library/components/heart-point-mark';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -592,17 +593,22 @@ export function ScriptDetail() {
                   </span>
                 </div>
                 <div className='h-5' />
-                <p className='font-serif text-5xl tracking-[-0.04em] tabular-nums'>
-                  {finalPrice.toLocaleString()}
-                  <span className='ml-2 text-sm text-white/36'>心源</span>
-                </p>
+                <HeartPointAmount
+                  amount={finalPrice}
+                  size='md'
+                  className='font-serif text-5xl tracking-[-0.04em]'
+                  nameClassName='font-sans text-sm tracking-normal text-white/36'
+                />
                 <p className='mt-2 text-xs text-white/30'>所有用户统一扣费</p>
                 <div className='mt-7 border-y border-white/10 py-5 text-xs leading-6 text-white/40'>
                   <p className='flex items-center justify-between'>
                     <span>当前余额</span>
-                    <strong className='font-mono font-normal text-white/72'>
-                      {currentUser?.points.toLocaleString()}
-                    </strong>
+                    <HeartPointAmount
+                      amount={currentUser?.points ?? 0}
+                      size='xs'
+                      showName={false}
+                      className='font-mono text-white/72'
+                    />
                   </p>
                   <p className='mt-2 flex items-center justify-between'>
                     <span>成交规则</span>
@@ -651,15 +657,19 @@ export function ScriptDetail() {
           <div className='border-y border-white/10 py-5'>
             <div className='flex items-end justify-between'>
               <span>应付心源</span>
-              <strong className='font-serif text-3xl font-normal text-white'>
-                {finalPrice.toLocaleString()}
-              </strong>
+              <HeartPointAmount
+                amount={finalPrice}
+                size='md'
+                className='font-serif text-3xl text-white'
+                nameClassName='font-sans text-xs text-white/36'
+              />
             </div>
             <div className='mt-3 flex justify-between text-xs text-white/32'>
               <span>购买后余额</span>
-              <span>
-                {Math.max(0, (currentUser?.points ?? 0) - finalPrice).toLocaleString()} 心源
-              </span>
+              <HeartPointAmount
+                amount={Math.max(0, (currentUser?.points ?? 0) - finalPrice)}
+                size='xs'
+              />
             </div>
           </div>
           <div className='mt-5 space-y-2 text-xs leading-5'>

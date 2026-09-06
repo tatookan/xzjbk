@@ -4,6 +4,10 @@ import { Icons } from '@/components/icons';
 import type { DemoUser, PointLedgerEntry, RechargePlan } from '@/features/script-library/api/types';
 import { LibraryHeader } from '@/features/script-library/components/library-header';
 import { useScriptLibraryDemo } from '@/features/script-library/components/demo-context';
+import {
+  HeartPointAmount,
+  HeartPointMark
+} from '@/features/script-library/components/heart-point-mark';
 import { cn } from '@/lib/utils';
 import { authClient } from '@/modules/identity/auth-client';
 import Image from 'next/image';
@@ -153,15 +157,23 @@ export function AccountScreen() {
           </div>
           <div className='grid grid-cols-2 gap-10'>
             <div>
-              <p className='text-xs text-white/34'>心源余额</p>
-              <p className='mt-1 font-serif text-3xl tabular-nums'>
-                {user.points.toLocaleString()}
+              <p className='flex items-center gap-2 text-xs text-white/34'>
+                <HeartPointMark size='xs' /> 心源余额
               </p>
+              <HeartPointAmount
+                amount={user.points}
+                size='md'
+                showName={false}
+                className='mt-1 font-serif text-3xl'
+              />
             </div>
             <div>
               <p className='text-xs text-white/34'>统一兑换</p>
-              <p className='mt-1 font-serif text-3xl tabular-nums'>¥1 = 100</p>
-              <p className='mt-1 text-[10px] text-white/28'>心源</p>
+              <div className='mt-1 flex items-center gap-2 font-serif text-3xl tabular-nums'>
+                <span>¥1 =</span>
+                <HeartPointAmount amount={100} size='md' showName={false} />
+              </div>
+              <p className='mt-1 text-[10px] text-white/28'>基础心源</p>
             </div>
           </div>
         </header>
@@ -237,7 +249,9 @@ export function AccountScreen() {
             <div className='flex items-start justify-between gap-4'>
               <div>
                 <p className='text-[10px] tracking-[0.2em] text-white/32 uppercase'>Recharge</p>
-                <h2 className='mt-2 font-serif text-3xl'>充值心源</h2>
+                <h2 className='mt-2 flex items-center gap-3 font-serif text-3xl'>
+                  <HeartPointMark size='md' /> 充值心源
+                </h2>
               </div>
               <span className='border border-white/12 px-2.5 py-1 text-[10px] text-white/38'>
                 支付待接入
@@ -279,9 +293,11 @@ export function AccountScreen() {
                         约 {plan.effectiveDiscount} 折
                       </span>
                     </div>
-                    <p className='mt-3 text-sm tabular-nums'>
-                      {plan.totalPoints.toLocaleString()} 心源
-                    </p>
+                    <HeartPointAmount
+                      amount={plan.totalPoints}
+                      className='mt-3 text-sm'
+                      nameClassName='text-white/38'
+                    />
                     <p className='mt-1 text-[10px] text-white/30'>
                       {plan.bonusPoints
                         ? `含赠送 ${plan.bonusPoints.toLocaleString()}`
@@ -298,9 +314,15 @@ export function AccountScreen() {
 
             <div className='mt-6 flex items-center justify-between border-y border-white/10 py-4 text-sm'>
               <span className='text-white/38'>选择到账</span>
-              <strong className='font-mono font-normal tabular-nums'>
-                {selectedPlan ? `${selectedPlan.totalPoints.toLocaleString()} 心源` : '未选择'}
-              </strong>
+              {selectedPlan ? (
+                <HeartPointAmount
+                  amount={selectedPlan.totalPoints}
+                  className='font-mono'
+                  nameClassName='font-sans text-white/38'
+                />
+              ) : (
+                <strong className='font-mono font-normal'>未选择</strong>
+              )}
             </div>
             <button
               type='button'
@@ -336,15 +358,16 @@ export function AccountScreen() {
                     </p>
                   </div>
                   <div className='text-right'>
-                    <p
+                    <HeartPointAmount
+                      amount={entry.amount}
+                      prefix={entry.direction === 'credit' ? '+' : '-'}
+                      size='xs'
+                      showName={false}
                       className={cn(
-                        'font-mono text-sm tabular-nums',
+                        'font-mono text-sm',
                         entry.direction === 'credit' ? 'text-[#76c69a]' : 'text-[#ed8a81]'
                       )}
-                    >
-                      {entry.direction === 'credit' ? '+' : '-'}
-                      {entry.amount.toLocaleString()}
-                    </p>
+                    />
                     <p className='mt-1 text-[10px] text-white/28'>
                       余额 {entry.balanceAfter.toLocaleString()}
                     </p>
