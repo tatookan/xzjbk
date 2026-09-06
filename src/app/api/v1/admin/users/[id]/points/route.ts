@@ -15,7 +15,7 @@ export function POST(request: Request, context: PointsRouteContext) {
     const { id } = await context.params;
     const input = pointsAdjustmentSchema.parse(await readJson(request));
     return {
-      data: await adjustUserPoints(id, input.delta, input.note, session.user.id),
+      data: await adjustUserPoints(id, input.delta, input.note, session.user.id, input.operationId),
       headers: { 'Cache-Control': 'private, no-store' }
     };
   });

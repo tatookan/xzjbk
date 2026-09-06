@@ -3,6 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "test:audit": "tsx scripts/audit-regression.ts",
+    "test:browser": "node scripts/browser-regression.mjs",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
@@ -50,6 +52,7 @@
     "lint-staged": "^15.5.2",
     "oxfmt": "^0.42.0",
     "oxlint": "^1.57.0",
+    "playwright": "^1.63.0",
     "postcss": "8.5.25",
     "tailwindcss": "^4.2.2",
     "tsx": "^4.23.13",

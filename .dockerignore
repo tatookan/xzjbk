@@ -29,6 +29,7 @@ var/postgres/
 var/postgres.log
 var/storage/*
 var/backups/
+var/tmp/
 
 # Docker files
 Dockerfile*

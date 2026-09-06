@@ -1,8 +1,9 @@
 schema_version: 1
 project: xinzhi_portal_and_script_library
 updated_at: "2026-09-06"
-phase: deployment_ready
+phase: formal_development
 progress_percent: 97
+progress_basis: historical_feature_completion_estimate_not_release_acceptance
 
 architecture:
   style: api_first_modular_monolith
@@ -13,6 +14,7 @@ architecture:
   deployment: single_host_docker_compose
 
 capabilities:
+  task_temporary_artifact_management: complete
   brand_portal: complete
   portal_pv_playback: complete
   managed_showcase_posters: complete
@@ -29,7 +31,7 @@ capabilities:
   exclusive_purchase: complete
   orders_and_private_downloads: complete
   combined_delivery_zip_download: complete
-  production_security_and_backup: complete
+  production_security_and_backup: in_progress
   alipay_desktop_recharge: placeholder
   oss_storage_adapter: planned
 
@@ -55,7 +57,28 @@ deployment_state:
   production_domain_configured: false
   alipay_enabled: false
 
+release_audit:
+  reviewed_at: "2026-09-06"
+  baseline_commit: bd27bd7
+  result: local_fixes_verified_target_acceptance_pending
+  report: docs/AUDIT-2026-09-06.md
+  implemented_findings: 7
+  locally_verified_findings: 5
+  pending_target_environment_findings:
+    - A-02
+    - A-03
+  production_acceptance_complete: false
+  docker_build_and_runtime_verified: false
+  authenticated_concurrency_tests_run_this_audit: true
+  restore_drill_run_this_audit: true
+  local_database_test_version: PostgreSQL_14_20
+  isolated_database_regression_groups: 9
+  synthetic_api_browser_scenarios: 3
+  latest_migration: 0005_points-operation-id
+
 known_constraints:
+  - release_readiness_requires_target_docker_linux_postgresql_17_acceptance
+  - local_next_build_and_smoke_do_not_verify_docker_runtime
   - payment_driver_must_remain_disabled_until_alipay_adapter_exists
   - storage_driver_must_remain_local_until_oss_adapter_exists
   - local_storage_requires_persistent_disk_and_off_host_backups
@@ -63,6 +86,7 @@ known_constraints:
   - demo_context_filename_is_legacy_but_the_data_flow_is_formal
 
 next_milestones:
+  - run_business_regression_and_restore_drill_on_target_postgresql_17_and_container_uids
   - prepare_production_server_domain_tls_and_secrets
   - run_docker_compose_and_full_acceptance_on_the_target_server
   - decide_when_to_integrate_alipay_desktop_recharge
@@ -70,6 +94,7 @@ next_milestones:
   - implement_oss_adapter_only_when_storage_scale_requires_it
 
 source_documents:
+  latest_release_audit: docs/AUDIT-2026-09-06.md
   project_structure: docs/PROJECT_STRUCTURE.md
   architecture_decisions: docs/llm/DECISIONS.md
   deployment_runbook: docs/DEPLOYMENT.md

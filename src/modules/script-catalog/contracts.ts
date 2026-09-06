@@ -9,6 +9,7 @@ export interface CatalogPreviewLine {
 
 export interface CatalogScriptDto {
   id: string;
+  version: number;
   title: string;
   englishTitle: string;
   genre: string;

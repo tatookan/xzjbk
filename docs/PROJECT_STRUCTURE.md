@@ -31,7 +31,7 @@ next-shadcn-dashboard-starter/
 ├── public/                   门户固定图片和 PV 视频
 ├── scripts/                  初始化、检查、备份等运维脚本
 ├── docs/                     项目、部署和 LLM Wiki 文档
-├── var/                      本地上传文件和备份，不提交 Git
+├── var/                      上传、备份与临时任务目录，运行内容不提交 Git
 ├── Dockerfile                生产镜像构建方式
 ├── compose.yaml              本地开发数据库
 ├── compose.production.yaml   正式服务器部署结构
@@ -251,6 +251,8 @@ API 路由只负责四件事：
 - `smoke-test.ts`：检查公开页面、游客权限和安全配置。
 - `backup-create.sh`：备份 PostgreSQL 和剧本文件。
 - `backup-verify.sh`：验证备份完整性。
+- `audit-regression.ts`：独立数据库中的业务、权限、并发、自检和备份恢复回归。
+- `browser-regression.mjs`：独立浏览器与合成响应中的账户切换、缓存隔离回归。
 
 ### `docs`
 
@@ -265,10 +267,13 @@ API 路由只负责四件事：
 ```text
 var/
 ├── storage/     管理员上传的真实文件
-└── backups/     数据库和文件备份
+├── backups/     数据库和文件备份
+└── tmp/         每次任务独立子目录，一次性运行产物结束后清理
 ```
 
 这里不会提交到 Git。不要手工改名、移动或删除 `storage` 中的文件，因为数据库保存的是对应 object key。
+
+`tmp/README.md` 是提交到 Git 的目录说明，其余临时内容被 Git 与 Docker 忽略。一次性调试脚本、截图、夹具、临时日志和恢复测试文件统一进入 `var/tmp/<任务随机目录>/`，任务结束时只清理自己创建的子目录；保留原因和清理条件写在该子目录说明中。正式测试程序属于 `scripts/`，长期结论属于 LLM Wiki。`storage/` 与 `backups/` 不适用临时清理规则。
 
 ## 典型业务流程
 

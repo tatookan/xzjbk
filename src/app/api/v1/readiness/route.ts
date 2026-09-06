@@ -4,6 +4,7 @@ import { getDatabase } from '@/infrastructure/database/client';
 import { getStorageProvider } from '@/infrastructure/storage';
 import { AppError } from '@/shared/api/errors';
 import { withApiHandler } from '@/shared/api/handler';
+import { logServerError } from '@/shared/api/log-error';
 
 export const runtime = 'nodejs';
 
@@ -22,7 +23,7 @@ export function GET(request: Request) {
       };
     } catch (error) {
       if (error instanceof AppError) throw error;
-      console.error('Readiness check failed', { error });
+      logServerError('Readiness check failed', error);
       throw new AppError('SERVICE_UNAVAILABLE', '服务依赖尚未就绪', 503);
     }
   });

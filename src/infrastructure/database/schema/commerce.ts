@@ -68,6 +68,7 @@ export const pointLedger = pgTable(
     amount: integer('amount').notNull(),
     balanceAfter: integer('balance_after').notNull(),
     source: ledgerSource('source').notNull(),
+    operationId: uuid('operation_id'),
     referenceType: text('reference_type'),
     referenceId: text('reference_id'),
     note: text('note'),
@@ -78,6 +79,7 @@ export const pointLedger = pgTable(
   },
   (table) => [
     index('point_ledger_user_created_idx').on(table.userId, table.createdAt),
+    uniqueIndex('point_ledger_operation_unique').on(table.operationId),
     check('point_ledger_amount_positive', sql`${table.amount} > 0`),
     check('point_ledger_balance_nonnegative', sql`${table.balanceAfter} >= 0`)
   ]

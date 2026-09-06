@@ -23,6 +23,8 @@ pnpm-lock.yaml
 /var/postgres/
 /var/postgres.log
 /var/backups/
+/var/tmp/*
+!/var/tmp/README.md
 
 # misc
 .DS_Store

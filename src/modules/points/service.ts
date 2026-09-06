@@ -1,4 +1,4 @@
-import { and, asc, desc, eq } from 'drizzle-orm';
+import { and, asc, desc, eq, sql } from 'drizzle-orm';
 
 import { getDatabase } from '@/infrastructure/database/client';
 import {
@@ -89,10 +89,14 @@ export async function adjustUserPoints(
   userId: string,
   delta: number,
   note: string,
-  actorUserId: string
+  actorUserId: string,
+  operationId: string
 ): Promise<{ user: PointsUserDto; entry: PointLedgerDto }> {
   const database = getDatabase();
   return database.transaction(async (transaction) => {
+    await transaction.execute(
+      sql`select pg_advisory_xact_lock(hashtextextended(${operationId}, 0))`
+    );
     const [user] = await transaction
       .select()
       .from(users)
@@ -104,9 +108,29 @@ export async function adjustUserPoints(
       throw new AppError('CONFLICT', '管理员账号不参与心源账户调整', 409);
     }
 
+    const [previous] = await transaction
+      .select()
+      .from(pointLedger)
+      .where(eq(pointLedger.operationId, operationId));
+    if (previous) {
+      if (
+        previous.userId !== userId ||
+        previous.createdByUserId !== actorUserId ||
+        previous.amount !== Math.abs(delta) ||
+        previous.direction !== (delta > 0 ? 'credit' : 'debit') ||
+        previous.note !== note
+      ) {
+        throw new AppError('CONFLICT', '该操作编号已用于其他调账，请核对后重试', 409);
+      }
+      return { user: userDto(user), entry: ledgerDto(previous) };
+    }
+
     const balanceAfter = user.pointsBalance + delta;
     if (balanceAfter < 0) {
       throw new AppError('CONFLICT', '扣减后余额不能小于 0', 409);
+    }
+    if (balanceAfter > 2_147_483_647) {
+      throw new AppError('CONFLICT', '调整后余额超过账户上限', 409);
     }
 
     const now = new Date();
@@ -123,6 +147,7 @@ export async function adjustUserPoints(
         amount: Math.abs(delta),
         balanceAfter,
         source: 'admin-adjustment',
+        operationId,
         note,
         createdByUserId: actorUserId,
         createdAt: now

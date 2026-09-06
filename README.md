@@ -1,10 +1,12 @@
 # 心智 XINZHI
 
-心智 AI 漫剧门户与剧本库。核心正式功能已经完成，当前处于部署准备阶段。项目采用 API 优先的模块化单体架构：一个仓库和一个部署单元，内部保持清晰的业务与基础设施边界。
+心智 AI 漫剧门户与剧本库。核心功能及首轮审计修复已完成，当前等待目标服务器上的生产验收。项目采用 API 优先的模块化单体架构：一个仓库和一个部署单元，内部保持清晰的业务与基础设施边界。具体修复与验证范围见 [审计报告](./docs/AUDIT-2026-09-06.md)。
 
 ## 开发入口
 
 新开发者或模型进入项目前，先阅读 [LLM Wiki 入口](./docs/llm/README.md) 和 [当前项目状态](./docs/llm/STATE.yaml)。需要了解前后端位置与完整目录职责时，阅读 [项目结构说明](./docs/PROJECT_STRUCTURE.md)；涉及上线时阅读 [部署手册](./docs/DEPLOYMENT.md)。
+
+一次性脚本、截图、夹具与临时日志统一放入 `var/tmp/` 的任务独立子目录，结束时清理；可复用工具留在 `scripts/`，长期结论留在 Wiki。详细边界见 [开发入口规则](./AGENTS.md)。
 
 ## 当前范围
 
@@ -49,6 +51,8 @@ npm run build
 npm run db:check
 npm run deploy:smoke
 ```
+
+业务回归：`npm run test:audit`（通过 AUDIT_DATABASE_URL 提供有创建临时数据库权限的本机/测试连接）。浏览器回归：开发服务器运行时执行 `npm run test:browser`，首次运行前执行 `npx playwright install chromium --only-shell`。运行产物自动归入 var/tmp 并清理。具体覆盖和生产环境限制见部署手册。
 
 数据库结构变更使用版本迁移：
 

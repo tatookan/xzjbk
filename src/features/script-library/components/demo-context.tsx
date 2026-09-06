@@ -8,7 +8,7 @@ import type {
   ScriptAdminUpdate
 } from '@/features/script-library/api/types';
 import { authClient } from '@/modules/identity/auth-client';
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useRef, useState } from 'react';
 
 interface PurchaseResult {
   ok: boolean;
@@ -45,6 +45,36 @@ async function logout(): Promise<void> {
 
 export function ScriptLibraryDemoProvider({ children }: { children: React.ReactNode }) {
   const { data: session, isPending: authPending } = authClient.useSession();
+  // Remount both cached data and page-local forms/readers synchronously on identity changes.
+  const identityKey = authPending
+    ? 'pending'
+    : session
+      ? `${session.user.id}:${session.user.role}`
+      : 'guest';
+  return (
+    <IdentityScopedProvider key={identityKey} session={session} authPending={authPending}>
+      {children}
+    </IdentityScopedProvider>
+  );
+}
+
+function IdentityScopedProvider({
+  children,
+  session,
+  authPending
+}: {
+  children: React.ReactNode;
+  session: ReturnType<typeof authClient.useSession>['data'];
+  authPending: boolean;
+}) {
+  const alive = useRef(true);
+  const adjustmentOperations = useRef(new Map<string, string>());
+  useEffect(() => {
+    alive.current = true;
+    return () => {
+      alive.current = false;
+    };
+  }, []);
   const [scripts, setScripts] = useState<DemoScript[]>([]);
   const [scriptsLoading, setScriptsLoading] = useState(true);
   const [users, setUsers] = useState<DemoUser[]>([]);
@@ -81,6 +111,7 @@ export function ScriptLibraryDemoProvider({ children }: { children: React.ReactN
           setScripts(payload.data.items);
         }
       })
+      .catch(() => undefined)
       .finally(() => {
         if (active) setScriptsLoading(false);
       });
@@ -183,6 +214,7 @@ export function ScriptLibraryDemoProvider({ children }: { children: React.ReactN
       if (!response.ok || !payload.success || !payload.data) {
         return { ok: false, message: payload.error?.message ?? '购买未完成' };
       }
+      if (!alive.current) return { ok: false, message: '账户已切换，请重新查看结果' };
       setScripts((items) =>
         items.map((item) => (item.id === scriptId ? payload.data!.script : item))
       );
@@ -202,11 +234,28 @@ export function ScriptLibraryDemoProvider({ children }: { children: React.ReactN
     amount: number,
     note: string
   ): Promise<PurchaseResult> => {
+    const key = JSON.stringify([currentUser?.id, userId, amount, note.trim()]);
+    const storageKey = `xinzhi:points-operation:${currentUser?.id}:${userId}`;
+    let operationId = adjustmentOperations.current.get(key);
+    if (!operationId) {
+      try {
+        const saved = JSON.parse(sessionStorage.getItem(storageKey) ?? 'null');
+        if (saved?.key === key && typeof saved.operationId === 'string')
+          operationId = saved.operationId;
+      } catch {
+        /* In-memory retries still work when browser storage is unavailable. */
+      }
+      operationId ??= crypto.randomUUID();
+      adjustmentOperations.current.set(key, operationId);
+      try {
+        sessionStorage.setItem(storageKey, JSON.stringify({ key, operationId }));
+      } catch {}
+    }
     try {
       const response = await fetch(`/api/v1/admin/users/${userId}/points`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ delta: amount, note })
+        body: JSON.stringify({ delta: amount, note, operationId })
       });
       const payload = (await response.json()) as {
         success: boolean;
@@ -216,6 +265,12 @@ export function ScriptLibraryDemoProvider({ children }: { children: React.ReactN
       if (!response.ok || !payload.success || !payload.data) {
         return { ok: false, message: payload.error?.message ?? '心源调整失败' };
       }
+      adjustmentOperations.current.delete(key);
+      try {
+        const saved = JSON.parse(sessionStorage.getItem(storageKey) ?? 'null');
+        if (saved?.operationId === operationId) sessionStorage.removeItem(storageKey);
+      } catch {}
+      if (!alive.current) return { ok: false, message: '账户已切换，请重新查看结果' };
       setUsers((items) => items.map((item) => (item.id === userId ? payload.data!.user : item)));
       return { ok: true, message: '心源余额已更新，流水已经记录' };
     } catch {
@@ -295,6 +350,7 @@ export function ScriptLibraryDemoProvider({ children }: { children: React.ReactN
     try {
       const response = await fetch(`/api/v1/admin/scripts/${input.id}`, {
         method: 'PATCH',
+        headers: { 'If-Match': `"${input.version}"` },
         body: formData
       });
       const payload = (await response.json()) as {
@@ -327,7 +383,10 @@ export function ScriptLibraryDemoProvider({ children }: { children: React.ReactN
       return { ok: false, message: '已售出剧本关联交易记录，只能保留归档' };
     }
     try {
-      const response = await fetch(`/api/v1/admin/scripts/${scriptId}`, { method: 'DELETE' });
+      const response = await fetch(`/api/v1/admin/scripts/${scriptId}`, {
+        method: 'DELETE',
+        headers: { 'If-Match': `"${target.version}"` }
+      });
       const payload = (await response.json()) as {
         success: boolean;
         error?: { message?: string };

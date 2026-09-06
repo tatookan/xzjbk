@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+umask 077
 
 : "${DATABASE_URL:?DATABASE_URL must be set}"
 : "${STORAGE_LOCAL_ROOT:?STORAGE_LOCAL_ROOT must be set}"

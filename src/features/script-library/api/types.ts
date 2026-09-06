@@ -19,6 +19,7 @@ export interface DirectorSection {
 
 export interface DemoScript {
   id: string;
+  version: number;
   title: string;
   englishTitle: string;
   genre: string;
@@ -53,6 +54,7 @@ export interface DemoScript {
 
 export interface ScriptAdminUpdate {
   id: string;
+  version: number;
   title: string;
   englishTitle: string;
   genre: string;

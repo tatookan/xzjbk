@@ -3,6 +3,7 @@ import { ZodError } from 'zod';
 
 import type { ApiFailure, ApiHandlerResult, ApiMeta, ApiSuccess } from './contracts';
 import { AppError } from './errors';
+import { logServerError } from './log-error';
 
 const REQUEST_ID_PATTERN = /^[a-zA-Z0-9._:-]{1,100}$/;
 
@@ -68,7 +69,7 @@ export async function withApiHandler<T>(
       );
     }
 
-    console.error('Unhandled API error', { requestId, error });
+    logServerError('Unhandled API error', error, requestId);
     return NextResponse.json(
       {
         success: false,

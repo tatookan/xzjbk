@@ -47,6 +47,7 @@ function baseDto(row: ScriptRow): CatalogScriptDto {
   const status = row.script.status === 'archived' ? 'draft' : row.script.status;
   return {
     id: row.script.id,
+    version: row.script.version,
     title: row.script.title,
     englishTitle: row.script.englishTitle ?? '',
     genre: row.script.genre,
@@ -277,23 +278,34 @@ export async function updateScript(
   id: string,
   input: CatalogScriptInput,
   replacementCover: PreparedCatalogAsset | null,
-  actorUserId: string
+  actorUserId: string,
+  expectedVersion: number
 ): Promise<CatalogScriptDto> {
   const database = getDatabase();
-  const [existing] = await selectScriptRows().where(
-    and(eq(scripts.id, id), ne(scripts.status, 'archived'), isNull(mediaAssets.deletedAt))
-  );
-  if (!existing) {
-    if (replacementCover) await discardPreparedAssets([replacementCover]);
-    throw new AppError('NOT_FOUND', '剧本不存在', 404);
-  }
-  if (existing.script.status === 'sold') {
-    if (replacementCover) await discardPreparedAssets([replacementCover]);
-    throw new AppError('CONFLICT', '已售出剧本已经锁定，不能修改', 409);
-  }
-
+  let oldCoverKey: string | undefined;
   try {
     await database.transaction(async (transaction) => {
+      const [script] = await transaction
+        .select()
+        .from(scripts)
+        .where(eq(scripts.id, id))
+        .for('update');
+      if (!script || script.status === 'archived' || !script.coverAssetId) {
+        throw new AppError('NOT_FOUND', '剧本不存在', 404);
+      }
+      if (script.status === 'sold') {
+        throw new AppError('CONFLICT', '已售出剧本已经锁定，不能修改', 409);
+      }
+      if (script.version !== expectedVersion) {
+        throw new AppError('CONFLICT', '剧本已被更新，请刷新后重新编辑', 409);
+      }
+      const [cover] = await transaction
+        .select()
+        .from(mediaAssets)
+        .where(and(eq(mediaAssets.id, script.coverAssetId), isNull(mediaAssets.deletedAt)));
+      if (!cover) throw new AppError('NOT_FOUND', '剧本封面不存在', 404);
+      const existing = { script, cover };
+      oldCoverKey = cover.objectKey;
       let coverAssetId = existing.cover.id;
       if (replacementCover) {
         const [newCover] = await transaction
@@ -333,36 +345,50 @@ export async function updateScript(
     if (replacementCover) await discardPreparedAssets([replacementCover]);
     throw error;
   }
-  if (replacementCover) {
+  if (replacementCover && oldCoverKey) {
     await getStorageProvider()
-      .delete(existing.cover.objectKey)
+      .delete(oldCoverKey)
       .catch(() => undefined);
   }
   return getScriptDetail(id, 'admin');
 }
 
-export async function deleteScript(id: string, actorUserId: string): Promise<void> {
+export async function deleteScript(
+  id: string,
+  actorUserId: string,
+  expectedVersion: number
+): Promise<void> {
   const database = getDatabase();
-  const [existing] = await database.select().from(scripts).where(eq(scripts.id, id));
-  if (!existing || existing.status === 'archived') {
-    throw new AppError('NOT_FOUND', '剧本不存在', 404);
-  }
-  if (existing.status === 'sold') {
-    throw new AppError('CONFLICT', '已售出剧本关联交易记录，只能保留归档', 409);
-  }
+  const assets = await database.transaction(async (transaction) => {
+    const [existing] = await transaction
+      .select()
+      .from(scripts)
+      .where(eq(scripts.id, id))
+      .for('update');
+    if (!existing || existing.status === 'archived') {
+      throw new AppError('NOT_FOUND', '剧本不存在', 404);
+    }
+    if (existing.status === 'sold') {
+      throw new AppError('CONFLICT', '已售出剧本关联交易记录，只能保留归档', 409);
+    }
+    if (existing.version !== expectedVersion) {
+      throw new AppError('CONFLICT', '剧本已被更新，请刷新后重试', 409);
+    }
 
-  const fileAssets = await database
-    .select({ asset: mediaAssets })
-    .from(scriptFiles)
-    .innerJoin(mediaAssets, eq(scriptFiles.assetId, mediaAssets.id))
-    .where(eq(scriptFiles.scriptId, id));
-  const coverAssets = existing.coverAssetId
-    ? await database.select().from(mediaAssets).where(eq(mediaAssets.id, existing.coverAssetId))
-    : [];
-  const assets = [...coverAssets, ...fileAssets.map((item) => item.asset)];
-  const assetIds = assets.map((asset) => asset.id);
+    const fileAssets = await transaction
+      .select({ asset: mediaAssets })
+      .from(scriptFiles)
+      .innerJoin(mediaAssets, eq(scriptFiles.assetId, mediaAssets.id))
+      .where(eq(scriptFiles.scriptId, id));
+    const coverAssets = existing.coverAssetId
+      ? await transaction
+          .select()
+          .from(mediaAssets)
+          .where(eq(mediaAssets.id, existing.coverAssetId))
+      : [];
+    const assets = [...coverAssets, ...fileAssets.map((item) => item.asset)];
+    const assetIds = assets.map((asset) => asset.id);
 
-  await database.transaction(async (transaction) => {
     await transaction.delete(scripts).where(eq(scripts.id, id));
     if (assetIds.length) {
       await transaction
@@ -377,6 +403,7 @@ export async function deleteScript(id: string, actorUserId: string): Promise<voi
       entityId: id,
       metadata: { assetCount: assets.length }
     });
+    return assets;
   });
   await Promise.all(
     assets.map((asset) =>

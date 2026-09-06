@@ -1,5 +1,6 @@
-import { access, mkdir, stat } from 'node:fs/promises';
-import { constants } from 'node:fs';
+import { mkdir, stat, readFile, open, unlink, realpath } from 'node:fs/promises';
+import { createReadStream } from 'node:fs';
+import { createHash, randomUUID } from 'node:crypto';
 import { isAbsolute, relative, resolve, sep } from 'node:path';
 
 import { config } from 'dotenv';
@@ -61,7 +62,19 @@ async function main() {
     throw new Error('STORAGE_LOCAL_ROOT must be an absolute, dedicated directory');
   }
   await mkdir(storageRoot, { recursive: true, mode: 0o750 });
-  await access(storageRoot, constants.R_OK | constants.W_OK);
+  const realRoot = await realpath(storageRoot);
+  const probe = resolve(realRoot, `.preflight-${randomUUID()}`);
+  const probeBytes = randomUUID();
+  const handle = await open(probe, 'wx', 0o600);
+  try {
+    await handle.writeFile(probeBytes);
+    await handle.sync();
+    if ((await readFile(probe, 'utf8')) !== probeBytes)
+      throw new Error('Storage read/write probe failed');
+  } finally {
+    await handle.close();
+    await unlink(probe);
+  }
 
   const sql = postgres(databaseUrl, { max: 1, connect_timeout: 5, prepare: false });
   try {
@@ -70,19 +83,52 @@ async function main() {
              to_regclass('public.__xinzhi_migrations')::text as migrations
     `;
     if (!database?.migrations) throw new Error('Database migrations have not been applied');
+    const journal = JSON.parse(await readFile(resolve('drizzle/meta/_journal.json'), 'utf8')) as {
+      entries: { tag: string; when: number }[];
+    };
+    const expected = await Promise.all(
+      journal.entries.map(async (entry) => ({
+        hash: createHash('sha256')
+          .update(await readFile(resolve('drizzle', `${entry.tag}.sql`)))
+          .digest('hex'),
+        createdAt: entry.when
+      }))
+    );
+    const applied = await sql<{ hash: string; created_at: string }[]>`
+      select hash, created_at from public.__xinzhi_migrations order by created_at, id
+    `;
+    if (
+      applied.length !== expected.length ||
+      expected.some(
+        (entry, index) =>
+          applied[index]?.hash !== entry.hash ||
+          Number(applied[index]?.created_at) !== entry.createdAt
+      )
+    ) {
+      throw new Error(
+        'Applied database migrations do not match this release; run the release migrations before starting'
+      );
+    }
 
-    const assets = await sql<{ objectKey: string; sizeBytes: string }[]>`
-      select object_key as "objectKey", size_bytes as "sizeBytes"
+    const assets = await sql<
+      { objectKey: string; sizeBytes: string; checksum: string; provider: string }[]
+    >`
+      select object_key as "objectKey", size_bytes as "sizeBytes", checksum_sha256 as checksum, provider
       from media_assets
-      where provider = 'local' and deleted_at is null
+      where deleted_at is null
     `;
     const invalidAssets: string[] = [];
     for (const asset of assets) {
       try {
-        const file = await stat(safeStorageTarget(storageRoot, asset.objectKey));
-        if (!file.isFile() || file.size !== Number(asset.sizeBytes)) {
-          invalidAssets.push(asset.objectKey);
-        }
+        if (asset.provider !== 'local') throw new Error('Unsupported asset provider');
+        const target = await realpath(safeStorageTarget(realRoot, asset.objectKey));
+        safeStorageTarget(realRoot, relative(realRoot, target));
+        const file = await stat(target);
+        if (!file.isFile() || file.size !== Number(asset.sizeBytes))
+          throw new Error('Invalid asset size');
+        const hash = createHash('sha256');
+        for await (const chunk of createReadStream(target)) hash.update(chunk);
+        if (hash.digest('hex') !== asset.checksum) throw new Error('Invalid asset checksum');
       } catch {
         invalidAssets.push(asset.objectKey);
       }
@@ -103,6 +149,8 @@ async function main() {
 }
 
 main().catch((error: unknown) => {
-  console.error(`Deployment check failed: ${error instanceof Error ? error.message : 'unknown error'}`);
+  console.error(
+    `Deployment check failed: ${error instanceof Error ? error.message : 'unknown error'}`
+  );
   process.exitCode = 1;
 });

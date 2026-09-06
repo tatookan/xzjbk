@@ -127,6 +127,7 @@ export function ScriptEditor({ script, onClose }: { script: DemoScript; onClose:
     setSaving(true);
     const result = await updateScript({
       id: script.id,
+      version: script.version,
       title: String(data.get('title') ?? ''),
       englishTitle: String(data.get('englishTitle') ?? ''),
       genre: String(data.get('genre') ?? ''),

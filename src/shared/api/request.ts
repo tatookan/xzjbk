@@ -2,6 +2,15 @@ import { getServerEnv } from '@/shared/config/server-env';
 
 import { AppError } from './errors';
 
+export function readExpectedVersion(request: Request): number {
+  const match = /^"([1-9][0-9]*)"$/.exec(request.headers.get('if-match') ?? '');
+  const version = match ? Number(match[1]) : NaN;
+  if (!Number.isSafeInteger(version)) {
+    throw new AppError('CONFLICT', '请刷新剧本资料后重试', 428);
+  }
+  return version;
+}
+
 export async function readJson(request: Request): Promise<unknown> {
   try {
     return await request.json();
