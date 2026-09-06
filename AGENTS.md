@@ -1,5 +1,21 @@
 # 心智剧本库开发约定
 
+## 开发入口与 LLM Wiki
+
+任何模型或新开发者开始改动前，必须按顺序阅读：
+
+1. `docs/llm/README.md`：Wiki 使用与更新规则。
+2. `docs/llm/STATE.yaml`：当前阶段、完成项、限制与下一步。
+3. `docs/llm/DECISIONS.md`：已经确认的关键产品和架构决策。
+4. 涉及目录或职责时阅读 `docs/PROJECT_STRUCTURE.md`。
+5. 涉及部署、环境变量、备份或恢复时阅读 `docs/DEPLOYMENT.md`。
+
+阅读后检查 `git status` 和实际代码。代码是行为的最终依据；发现文档与代码不一致时应明确指出并修正文档，不得静默依赖过期说明。
+
+如果一次改动改变了产品模块、主要目录、API/数据库/存储/支付/身份/部署架构、项目阶段或长期业务规则，必须在同一次任务中更新对应 Wiki 文件。小型文案和样式修复不需要机械更新。
+
+禁止在 Wiki 中记录密码、注册码、Cookie、密钥、数据库连接串、完整剧本正文或真实用户隐私。父级 ChatGPT 项目中的 `sources/` 始终只读。
+
 ## 产品范围
 
 这是心智 AI 漫剧门户与剧本库项目。门户、剧本库、用户账户和管理员后台是当前核心模块。
@@ -36,3 +52,5 @@ npm run lint
 npm run format:check
 npm run build
 ```
+
+提交前再确认：如果本次属于 Wiki 规定的实质变化，`docs/llm/STATE.yaml`、`docs/llm/DECISIONS.md` 或 `docs/PROJECT_STRUCTURE.md` 已同步更新。
