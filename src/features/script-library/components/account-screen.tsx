@@ -5,8 +5,10 @@ import type { DemoUser, PointLedgerEntry, RechargePlan } from '@/features/script
 import { LibraryHeader } from '@/features/script-library/components/library-header';
 import { useScriptLibraryDemo } from '@/features/script-library/components/demo-context';
 import { cn } from '@/lib/utils';
+import { authClient } from '@/modules/identity/auth-client';
 import Image from 'next/image';
 import Link from 'next/link';
+import type { FormEvent } from 'react';
 import { useEffect, useState } from 'react';
 
 const sourceLabel: Record<PointLedgerEntry['source'], string> = {
@@ -24,6 +26,52 @@ export function AccountScreen() {
   const [selectedPlanId, setSelectedPlanId] = useState('');
   const [accountLoading, setAccountLoading] = useState(true);
   const [accountError, setAccountError] = useState('');
+  const [passwordSubmitting, setPasswordSubmitting] = useState(false);
+  const [passwordMessage, setPasswordMessage] = useState<{
+    kind: 'error' | 'success';
+    text: string;
+  } | null>(null);
+
+  const handlePasswordChange = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const formData = new FormData(form);
+    const currentPassword = String(formData.get('currentPassword') ?? '');
+    const newPassword = String(formData.get('newPassword') ?? '');
+    const confirmPassword = String(formData.get('confirmPassword') ?? '');
+
+    setPasswordMessage(null);
+    if (newPassword !== confirmPassword) {
+      setPasswordMessage({ kind: 'error', text: '两次输入的新密码不一致' });
+      return;
+    }
+    if (currentPassword === newPassword) {
+      setPasswordMessage({ kind: 'error', text: '新密码不能与当前密码相同' });
+      return;
+    }
+
+    setPasswordSubmitting(true);
+    try {
+      const result = await authClient.changePassword({
+        currentPassword,
+        newPassword,
+        revokeOtherSessions: true
+      });
+      if (result.error) {
+        setPasswordMessage({ kind: 'error', text: '当前密码不正确，请重新输入' });
+        return;
+      }
+      form.reset();
+      setPasswordMessage({
+        kind: 'success',
+        text: '密码已更新，其他设备上的登录状态已经退出'
+      });
+    } catch {
+      setPasswordMessage({ kind: 'error', text: '当前无法修改密码，请稍后重试' });
+    } finally {
+      setPasswordSubmitting(false);
+    }
+  };
 
   useEffect(() => {
     if (authPending || role === 'guest') return;
@@ -125,7 +173,7 @@ export function AccountScreen() {
         ) : null}
 
         <div className='mt-12 grid gap-12 lg:grid-cols-[0.86fr_1.14fr]'>
-          <section>
+          <section id='scripts' className='scroll-mt-28'>
             <div className='flex items-end justify-between'>
               <div>
                 <p className='text-[10px] tracking-[0.2em] text-white/32 uppercase'>My scripts</p>
@@ -136,12 +184,15 @@ export function AccountScreen() {
             {purchasedScripts.length ? (
               <div className='mt-6 space-y-3'>
                 {purchasedScripts.map((script) => (
-                  <Link
+                  <div
                     key={script.id}
-                    href={`/scripts/${script.id}`}
                     className='grid grid-cols-[72px_1fr_auto] items-center gap-4 border border-white/10 p-3 transition-colors hover:border-white/24'
                   >
-                    <div className='relative aspect-[3/4.2] overflow-hidden'>
+                    <Link
+                      href={`/scripts/${script.id}`}
+                      className='relative aspect-[3/4.2] overflow-hidden'
+                      aria-label={`查看《${script.title}》详情`}
+                    >
                       <Image
                         src={script.image}
                         alt={`${script.title}封面`}
@@ -149,13 +200,24 @@ export function AccountScreen() {
                         className='object-cover'
                         sizes='72px'
                       />
-                    </div>
+                    </Link>
                     <div>
-                      <p className='font-serif text-xl'>{script.title}</p>
-                      <p className='mt-1 text-xs text-white/38'>3 份标准交付文件</p>
+                      <Link
+                        href={`/scripts/${script.id}`}
+                        className='font-serif text-xl transition-colors hover:text-[#df675c]'
+                      >
+                        {script.title}
+                      </Link>
+                      <p className='mt-1 text-xs text-white/38'>完整交付包已解锁</p>
                     </div>
-                    <Icons.chevronRight className='text-white/32' size={17} />
-                  </Link>
+                    <a
+                      href={`/api/v1/scripts/${script.id}/files/all`}
+                      className='grid size-10 place-items-center border border-white/12 text-white/48 transition-colors hover:border-[#d84a3f] hover:text-[#d84a3f]'
+                      aria-label={`下载《${script.title}》全部交付物料`}
+                    >
+                      <Icons.download size={16} />
+                    </a>
+                  </div>
                 ))}
               </div>
             ) : (
@@ -168,7 +230,10 @@ export function AccountScreen() {
             )}
           </section>
 
-          <section className='border border-white/12 bg-white/[0.025] p-6 sm:p-8'>
+          <section
+            id='recharge'
+            className='scroll-mt-28 border border-white/12 bg-white/[0.025] p-6 sm:p-8'
+          >
             <div className='flex items-start justify-between gap-4'>
               <div>
                 <p className='text-[10px] tracking-[0.2em] text-white/32 uppercase'>Recharge</p>
@@ -293,6 +358,100 @@ export function AccountScreen() {
             </div>
           )}
         </section>
+
+        <section id='security' className='mt-14 scroll-mt-28 border-t border-white/10 pt-10'>
+          <div className='grid gap-8 lg:grid-cols-[0.72fr_1.28fr]'>
+            <div>
+              <p className='text-[10px] tracking-[0.2em] text-white/32 uppercase'>
+                Account security
+              </p>
+              <h2 className='mt-2 font-serif text-3xl'>账户安全</h2>
+              <p className='mt-4 max-w-sm text-sm leading-6 text-white/38'>
+                修改密码后，当前设备会继续保持登录，其他设备将需要使用新密码重新登录。
+              </p>
+            </div>
+            <form
+              onSubmit={handlePasswordChange}
+              className='grid gap-5 border border-white/10 bg-white/[0.02] p-6 sm:p-8'
+            >
+              <label className='grid gap-2 text-sm text-white/62'>
+                当前密码
+                <input
+                  name='currentPassword'
+                  type='password'
+                  autoComplete='current-password'
+                  minLength={8}
+                  maxLength={128}
+                  required
+                  className='h-12 border border-white/14 bg-[#101115] px-4 text-white outline-none transition-colors focus:border-[#d84a3f]'
+                />
+              </label>
+              <div className='grid gap-5 sm:grid-cols-2'>
+                <label className='grid gap-2 text-sm text-white/62'>
+                  新密码
+                  <input
+                    name='newPassword'
+                    type='password'
+                    autoComplete='new-password'
+                    minLength={8}
+                    maxLength={128}
+                    required
+                    className='h-12 border border-white/14 bg-[#101115] px-4 text-white outline-none transition-colors focus:border-[#d84a3f]'
+                  />
+                </label>
+                <label className='grid gap-2 text-sm text-white/62'>
+                  再次输入新密码
+                  <input
+                    name='confirmPassword'
+                    type='password'
+                    autoComplete='new-password'
+                    minLength={8}
+                    maxLength={128}
+                    required
+                    className='h-12 border border-white/14 bg-[#101115] px-4 text-white outline-none transition-colors focus:border-[#d84a3f]'
+                  />
+                </label>
+              </div>
+              <p className='text-xs leading-5 text-white/34'>密码长度为 8-128 位。</p>
+              {passwordMessage ? (
+                <p
+                  role={passwordMessage.kind === 'error' ? 'alert' : 'status'}
+                  className={cn(
+                    'flex items-center gap-2 text-sm',
+                    passwordMessage.kind === 'success' ? 'text-[#76c69a]' : 'text-[#ff8075]'
+                  )}
+                >
+                  {passwordMessage.kind === 'success' ? (
+                    <Icons.circleCheck size={16} />
+                  ) : (
+                    <Icons.alertCircle size={16} />
+                  )}
+                  {passwordMessage.text}
+                </p>
+              ) : null}
+              <button
+                type='submit'
+                disabled={passwordSubmitting}
+                className='mt-1 flex h-12 items-center justify-center gap-2 bg-[#d84a3f] px-6 text-sm font-semibold text-[#130f0f] transition-colors hover:bg-[#df5b51] active:translate-y-px disabled:cursor-wait disabled:opacity-55 sm:justify-self-start'
+              >
+                <Icons.password size={17} stroke={1.6} />
+                {passwordSubmitting ? '正在更新密码…' : '更新密码'}
+              </button>
+            </form>
+          </div>
+        </section>
+
+        <footer className='mt-14 flex flex-col gap-3 border-t border-white/8 pt-6 text-[11px] text-white/24 sm:flex-row sm:items-center sm:justify-between'>
+          <p>心智剧本库会员服务</p>
+          <nav className='flex gap-5' aria-label='法律信息'>
+            <Link href='/terms' className='transition-colors hover:text-white/52'>
+              用户协议
+            </Link>
+            <Link href='/privacy' className='transition-colors hover:text-white/52'>
+              隐私政策
+            </Link>
+          </nav>
+        </footer>
       </div>
     </main>
   );

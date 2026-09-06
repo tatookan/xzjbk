@@ -26,6 +26,10 @@ export const users = pgTable(
     image: text('image'),
     role: userRole('role').notNull().default('member'),
     pointsBalance: integer('points_balance').notNull().default(0),
+    termsAcceptedAt: timestamp('terms_accepted_at', { withTimezone: true }),
+    termsVersion: text('terms_version'),
+    privacyAcceptedAt: timestamp('privacy_accepted_at', { withTimezone: true }),
+    privacyVersion: text('privacy_version'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
   },

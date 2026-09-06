@@ -1,6 +1,6 @@
 import { randomBytes } from 'node:crypto';
 
-import { and, desc, eq, isNull } from 'drizzle-orm';
+import { and, asc, desc, eq, isNull } from 'drizzle-orm';
 
 import { getDatabase } from '@/infrastructure/database/client';
 import {
@@ -242,4 +242,56 @@ export async function getPurchasedFile(
     );
   if (!file) throw new AppError('NOT_FOUND', '交付文件不存在', 404);
   return file;
+}
+
+export async function getPurchasedFiles(
+  scriptId: string,
+  userId: string,
+  role: 'member' | 'admin'
+): Promise<{
+  scriptTitle: string;
+  files: Array<{
+    asset: typeof mediaAssets.$inferSelect;
+    displayName: string;
+    kind: PurchasedFileKind;
+  }>;
+}> {
+  if (role !== 'admin') {
+    const [order] = await getDatabase()
+      .select({ id: scriptOrders.id })
+      .from(scriptOrders)
+      .where(
+        and(
+          eq(scriptOrders.scriptId, scriptId),
+          eq(scriptOrders.buyerUserId, userId),
+          eq(scriptOrders.status, 'completed')
+        )
+      );
+    if (!order) throw new AppError('FORBIDDEN', '购买后才能下载完整文件', 403);
+  }
+
+  const rows = await getDatabase()
+    .select({
+      asset: mediaAssets,
+      displayName: scriptFiles.displayName,
+      kind: scriptFiles.kind,
+      scriptTitle: scripts.title
+    })
+    .from(scriptFiles)
+    .innerJoin(mediaAssets, eq(scriptFiles.assetId, mediaAssets.id))
+    .innerJoin(scripts, eq(scriptFiles.scriptId, scripts.id))
+    .where(
+      and(
+        eq(scriptFiles.scriptId, scriptId),
+        eq(mediaAssets.visibility, 'private'),
+        isNull(mediaAssets.deletedAt)
+      )
+    )
+    .orderBy(asc(scriptFiles.sortOrder), asc(scriptFiles.createdAt));
+
+  if (!rows.length) throw new AppError('NOT_FOUND', '交付文件不存在', 404);
+  return {
+    scriptTitle: rows[0].scriptTitle,
+    files: rows.map(({ asset, displayName, kind }) => ({ asset, displayName, kind }))
+  };
 }

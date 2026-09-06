@@ -16,6 +16,8 @@ async function main() {
     '/',
     '/scripts',
     '/login',
+    '/terms',
+    '/privacy',
     '/api/v1/health',
     '/api/v1/readiness',
     '/api/v1/showcase-posters'
@@ -40,6 +42,8 @@ async function main() {
     expectStatus('guest script detail protection', detailResponse, 401);
     const downloadResponse = await request(`/api/v1/scripts/${firstScriptId}/files/script`);
     expectStatus('guest private download protection', downloadResponse, 401);
+    const downloadAllResponse = await request(`/api/v1/scripts/${firstScriptId}/files/all`);
+    expectStatus('guest complete delivery protection', downloadAllResponse, 401);
   }
 
   const accountResponse = await request('/api/v1/account');

@@ -2,7 +2,7 @@ schema_version: 1
 project: xinzhi_portal_and_script_library
 updated_at: "2026-09-06"
 phase: deployment_ready
-progress_percent: 95
+progress_percent: 97
 
 architecture:
   style: api_first_modular_monolith
@@ -19,12 +19,16 @@ capabilities:
   public_script_catalog: complete
   whitelist_registration: complete
   member_login_and_session: complete
+  member_avatar_and_account_menu: complete
+  member_password_change: complete
+  terms_privacy_and_registration_consent: complete
   director_statement_and_preview: complete
   admin_script_management: complete
   heart_points_account: complete
   admin_points_adjustment: complete
   exclusive_purchase: complete
   orders_and_private_downloads: complete
+  combined_delivery_zip_download: complete
   production_security_and_backup: complete
   alipay_desktop_recharge: placeholder
   oss_storage_adapter: planned
@@ -33,8 +37,10 @@ business_invariants:
   - one_script_can_have_only_one_completed_buyer
   - sold_script_keeps_public_sold_card_but_hides_detail_from_other_users
   - full_script_files_never_enter_public_or_preview_responses
+  - full_delivery_zip_requires_completed_buyer_or_admin_authorization
   - only_admin_can_upload_or_edit_scripts
   - registration_requires_single_use_invite_code
+  - registration_requires_terms_and_privacy_consent_with_versioned_audit_fields
   - one_yuan_equals_one_hundred_heart_points
   - discounts_are_recharge_bonuses_not_account_discounts
   - maximum_effective_recharge_discount_is_four_tenths
@@ -60,6 +66,7 @@ next_milestones:
   - prepare_production_server_domain_tls_and_secrets
   - run_docker_compose_and_full_acceptance_on_the_target_server
   - decide_when_to_integrate_alipay_desktop_recharge
+  - replace_generic_legal_contact_and_operator_details_before_public_launch
   - implement_oss_adapter_only_when_storage_scale_requires_it
 
 source_documents:

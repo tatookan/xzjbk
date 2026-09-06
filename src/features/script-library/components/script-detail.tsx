@@ -160,7 +160,7 @@ function DeliveryManifest({ script, purchased }: { script: DemoScript; purchased
                   className='grid size-9 place-items-center border border-white/12 text-white/44 transition-colors hover:border-[#d84a3f] hover:text-[#d84a3f]'
                   aria-label={`下载${file.label}`}
                 >
-                  <Icons.externalLink size={14} />
+                  <Icons.download size={14} />
                 </a>
               ) : (
                 <Icons.lock className='text-white/22' size={14} />
@@ -552,13 +552,19 @@ export function ScriptDetail() {
                 </p>
                 <h2 className='mt-5 font-serif text-3xl tracking-[-0.035em]'>项目资产已解锁</h2>
                 <p className='mt-3 text-sm leading-6 text-white/42'>
-                  三份原始文件可以在下方交付清单或“我的剧本”中分别下载。
+                  英文稿、中文或中英稿、导演阐述已经整理为一个完整交付包。
                 </p>
                 <a
-                  href='#deliverables'
-                  className='mt-6 flex h-11 items-center justify-center gap-2 bg-[#d84a3f] text-sm font-semibold text-[#130f0f]'
+                  href={`/api/v1/scripts/${script.id}/files/all`}
+                  className='mt-6 flex h-12 items-center justify-center gap-2 bg-[#d84a3f] text-sm font-semibold whitespace-nowrap text-[#130f0f] transition-colors hover:bg-[#df5b51] active:translate-y-px'
                 >
-                  查看交付文件 <Icons.arrowRight size={16} />
+                  <Icons.download size={17} /> 下载全部交付物料
+                </a>
+                <a
+                  href='#deliverables'
+                  className='mt-4 block text-center text-xs text-white/34 transition-colors hover:text-white'
+                >
+                  也可以单独下载文件
                 </a>
               </>
             ) : role === 'admin' ? (

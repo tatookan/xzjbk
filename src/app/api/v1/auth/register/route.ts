@@ -10,7 +10,8 @@ const registrationSchema = z.object({
   name: z.string().trim().min(2, '姓名至少需要 2 个字符').max(50),
   email: z.email('请输入有效邮箱').transform((value) => value.toLowerCase()),
   password: z.string().min(8, '密码至少需要 8 位').max(128),
-  inviteCode: z.string().trim().min(12, '请输入有效注册码').max(64)
+  inviteCode: z.string().trim().min(12, '请输入有效注册码').max(64),
+  acceptedPolicies: z.literal(true, { error: '请先阅读并同意用户协议和隐私政策' })
 });
 
 export function POST(request: Request) {

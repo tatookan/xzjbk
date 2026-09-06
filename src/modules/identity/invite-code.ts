@@ -7,11 +7,14 @@ import { accounts, inviteCodes, users } from '@/infrastructure/database/schema';
 import { AppError, ConfigurationError } from '@/shared/api/errors';
 import { getServerEnv } from '@/shared/config/server-env';
 
+import { CURRENT_PRIVACY_VERSION, CURRENT_TERMS_VERSION } from './policies';
+
 export interface InviteRegistrationInput {
   name: string;
   email: string;
   passwordHash: string;
   inviteCode: string;
+  acceptedPolicies: true;
 }
 
 function normalizeInviteCode(code: string): string {
@@ -34,6 +37,9 @@ function isUniqueViolation(error: unknown): boolean {
 export async function registerWithInvite(
   input: InviteRegistrationInput
 ): Promise<{ id: string; name: string; email: string }> {
+  if (!input.acceptedPolicies) {
+    throw new AppError('BAD_REQUEST', '请先阅读并同意用户协议和隐私政策', 400);
+  }
   const database = getDatabase();
   const email = input.email.trim().toLowerCase();
   const inviteHash = hashInviteCode(input.inviteCode);
@@ -59,6 +65,10 @@ export async function registerWithInvite(
         email,
         role: 'member',
         pointsBalance: 0,
+        termsAcceptedAt: now,
+        termsVersion: CURRENT_TERMS_VERSION,
+        privacyAcceptedAt: now,
+        privacyVersion: CURRENT_PRIVACY_VERSION,
         createdAt: now,
         updatedAt: now
       });

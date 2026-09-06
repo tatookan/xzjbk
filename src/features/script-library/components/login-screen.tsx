@@ -15,6 +15,7 @@ export function LoginScreen() {
   const [mode, setMode] = useState<Mode>('login');
   const [message, setMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [acceptedPolicies, setAcceptedPolicies] = useState(false);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -36,7 +37,8 @@ export function LoginScreen() {
             name: String(formData.get('name') ?? ''),
             email,
             password,
-            inviteCode: String(formData.get('inviteCode') ?? '')
+            inviteCode: String(formData.get('inviteCode') ?? ''),
+            acceptedPolicies
           })
         });
         const payload = (await response.json()) as {
@@ -125,6 +127,7 @@ export function LoginScreen() {
                 onClick={() => {
                   setMode(item);
                   setMessage('');
+                  setAcceptedPolicies(false);
                 }}
                 className={`border-b py-3 transition-colors ${
                   mode === item
@@ -174,20 +177,52 @@ export function LoginScreen() {
               />
             </label>
             {mode === 'register' ? (
-              <label className='block text-sm text-white/66'>
-                注册码
-                <input
-                  name='inviteCode'
-                  autoComplete='off'
-                  minLength={12}
-                  maxLength={64}
-                  required
-                  className='mt-2 h-12 w-full border border-white/14 bg-white/[0.035] px-4 font-mono text-white uppercase outline-none transition-colors focus:border-[#d84a3f]'
-                />
-                <span className='mt-2 block text-xs leading-5 text-white/35'>
-                  每个注册码仅可绑定一个账号，使用后立即失效。
-                </span>
-              </label>
+              <>
+                <label className='block text-sm text-white/66'>
+                  注册码
+                  <input
+                    name='inviteCode'
+                    autoComplete='off'
+                    minLength={12}
+                    maxLength={64}
+                    required
+                    className='mt-2 h-12 w-full border border-white/14 bg-white/[0.035] px-4 font-mono text-white uppercase outline-none transition-colors focus:border-[#d84a3f]'
+                  />
+                  <span className='mt-2 block text-xs leading-5 text-white/35'>
+                    每个注册码仅可绑定一个账号，使用后立即失效。
+                  </span>
+                </label>
+                <div className='flex items-start gap-3 text-xs leading-5 text-white/46'>
+                  <input
+                    id='acceptedPolicies'
+                    type='checkbox'
+                    checked={acceptedPolicies}
+                    onChange={(event) => setAcceptedPolicies(event.target.checked)}
+                    required
+                    className='mt-0.5 size-4 shrink-0 accent-[#d84a3f]'
+                  />
+                  <span>
+                    <label htmlFor='acceptedPolicies' className='cursor-pointer'>
+                      我已阅读并同意
+                    </label>
+                    <Link
+                      href='/terms'
+                      target='_blank'
+                      className='mx-1 text-white/72 underline decoration-white/25 underline-offset-4 hover:text-white'
+                    >
+                      《用户协议》
+                    </Link>
+                    和
+                    <Link
+                      href='/privacy'
+                      target='_blank'
+                      className='ml-1 text-white/72 underline decoration-white/25 underline-offset-4 hover:text-white'
+                    >
+                      《隐私政策》
+                    </Link>
+                  </span>
+                </div>
+              </>
             ) : null}
 
             {message ? (
@@ -198,7 +233,7 @@ export function LoginScreen() {
 
             <button
               type='submit'
-              disabled={submitting}
+              disabled={submitting || (mode === 'register' && !acceptedPolicies)}
               className='flex h-12 w-full items-center justify-center gap-2 bg-[#d84a3f] text-sm font-semibold text-[#130f0f] transition-colors hover:bg-[#e05d52] disabled:cursor-wait disabled:opacity-55'
             >
               {submitting

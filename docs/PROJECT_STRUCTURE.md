@@ -60,6 +60,8 @@ src/app/
     ├── scripts/[id]/page.tsx      剧本详情 /scripts/剧本ID
     ├── login/page.tsx             登录注册 /login
     ├── account/page.tsx           个人中心 /account
+    ├── terms/page.tsx             用户协议 /terms
+    ├── privacy/page.tsx           隐私政策 /privacy
     └── admin/page.tsx             管理后台 /admin
 ```
 
@@ -86,13 +88,14 @@ src/app/
 
 - `library-home.tsx`：搜索、筛选、剧本卡片和已售状态。
 - `script-detail.tsx`：导演阐述、试读、购买和文件下载。
-- `login-screen.tsx`：登录和白名单注册。
-- `account-screen.tsx`：心源余额、已购剧本、流水和充值占位。
+- `login-screen.tsx`：登录、白名单注册和协议同意。
+- `account-screen.tsx`：心源余额、已购剧本、整包下载、流水、充值占位和密码修改。
 - `admin-dashboard.tsx`：管理员后台总界面。
 - `script-upload-flow.tsx`：上传新剧本。
 - `script-editor.tsx`：编辑剧本资料和白名单试读。
 - `showcase-manager.tsx`：管理门户滚动海报。
-- `library-header.tsx`：剧本库导航。
+- `library-header.tsx`：剧本库导航、用户头像和账户菜单。
+- `legal-document.tsx`：用户协议与隐私政策共用的阅读版式。
 - `demo-modal.tsx`：通用弹窗。
 - `api/types.ts`：前端使用的数据结构定义。
 
@@ -134,6 +137,7 @@ PostgreSQL / 私有文件目录
 /api/v1/scripts/[id]                剧本详情
 /api/v1/scripts/[id]/purchase       购买剧本
 /api/v1/scripts/[id]/files/[kind]   下载已购文件
+/api/v1/scripts/[id]/files/all      下载全部交付物料 ZIP
 /api/v1/account                     个人账户和心源流水
 /api/v1/admin/scripts               后台剧本管理
 /api/v1/admin/users                 用户管理
@@ -160,7 +164,7 @@ API 路由只负责四件事：
 
 #### `identity`
 
-负责登录会话、管理员/会员角色、一次性注册码、白名单注册和注册码撤销。
+负责登录会话、管理员/会员角色、一次性注册码、白名单注册、协议版本留痕、密码修改和注册码撤销。
 
 #### `script-catalog`
 
@@ -190,7 +194,7 @@ API 路由只负责四件事：
 
 `client.ts` 负责连接 PostgreSQL，`schema/` 定义数据库中的表。
 
-- `identity.ts`：用户、登录账号、会话、注册码。
+- `identity.ts`：用户、登录账号、会话、注册码和协议同意记录。
 - `scripts.ts`：剧本、试读、交付文件关系。
 - `commerce.ts`：购买订单、充值档位、心源流水、支付预留表。
 - `assets.ts`：图片和原文件记录。
@@ -287,11 +291,11 @@ commerce/service.ts
   ↓
 PostgreSQL 提交事务
   ↓
-前端显示购买成功和下载入口
+前端原购买按钮变为“下载全部交付物料”
   ↓
 下载时再次核验订单归属
   ↓
-StorageProvider 返回私有文件
+StorageProvider 返回私有文件，服务端生成完整 ZIP
 ```
 
 ### 管理员上传剧本
