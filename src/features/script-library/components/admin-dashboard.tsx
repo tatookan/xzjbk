@@ -1,6 +1,7 @@
 'use client';
 
 import { Icons } from '@/components/icons';
+import { XinzhiBrand } from '@/components/xinzhi-brand';
 import type { Icon } from '@/components/icons';
 import type { DemoScript, DemoUser, RechargePlan } from '@/features/script-library/api/types';
 import { DemoModal } from '@/features/script-library/components/demo-modal';
@@ -843,10 +844,7 @@ export function AdminDashboard() {
       >
         <div className='flex items-center justify-between'>
           <Link href='/' className='flex items-center gap-3'>
-            <span className='grid size-9 place-items-center border border-white/65 text-[11px] font-semibold tracking-[-0.08em]'>
-              心智
-            </span>
-            <span className='text-[10px] tracking-[0.18em] text-white/36'>ADMIN</span>
+            <XinzhiBrand descriptor='ADMIN' markSize={36} />
           </Link>
           <button
             type='button'

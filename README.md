@@ -4,7 +4,7 @@
 
 ## 开发入口
 
-新开发者或模型进入项目前，先阅读 [LLM Wiki 入口](./docs/llm/README.md) 和 [当前项目状态](./docs/llm/STATE.yaml)。需要了解前后端位置与完整目录职责时，阅读 [项目结构说明](./docs/PROJECT_STRUCTURE.md)；涉及上线时阅读 [部署手册](./docs/DEPLOYMENT.md)。
+新开发者或模型进入项目前，先阅读 [LLM Wiki 入口](./docs/llm/README.md) 和 [当前项目状态](./docs/llm/STATE.yaml)。需要了解前后端位置与完整目录职责时，阅读 [项目结构说明](./docs/PROJECT_STRUCTURE.md)；涉及品牌标志时阅读 [品牌标志规范](./docs/BRAND_IDENTITY.md)；涉及上线时阅读 [部署手册](./docs/DEPLOYMENT.md)。
 
 一次性脚本、截图、夹具与临时日志统一放入 `var/tmp/` 的任务独立子目录，结束时清理；可复用工具留在 `scripts/`，长期结论留在 Wiki。详细边界见 [开发入口规则](./AGENTS.md)。
 

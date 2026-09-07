@@ -8,7 +8,8 @@
 2. `docs/llm/STATE.yaml`：当前阶段、完成项、限制与下一步。
 3. `docs/llm/DECISIONS.md`：已经确认的关键产品和架构决策。
 4. 涉及目录或职责时阅读 `docs/PROJECT_STRUCTURE.md`。
-5. 涉及部署、环境变量、备份或恢复时阅读 `docs/DEPLOYMENT.md`。
+5. 涉及 Logo 或品牌资产时阅读 `docs/BRAND_IDENTITY.md`。
+6. 涉及部署、环境变量、备份或恢复时阅读 `docs/DEPLOYMENT.md`。
 
 阅读后检查 `git status` 和实际代码。代码是行为的最终依据；发现文档与代码不一致时应明确指出并修正文档，不得静默依赖过期说明。
 
@@ -43,6 +44,7 @@
 - 登录、白名单、积分、折扣、购买和下载权限必须在服务端再次校验。
 - 试读接口仅返回可展示内容；不要把完整剧本放入客户端、静态资源或页面源码。
 - 保持深色、克制、影视编辑感的心智视觉语言，不引入无关模板主题。
+- 心智标志统一复用 `public/brand` 与 `src/components/xinzhi-brand.tsx`，不得在页面中临时重画另一套 Logo。
 
 ## 临时文件与任务收尾
 

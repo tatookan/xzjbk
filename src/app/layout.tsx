@@ -21,6 +21,11 @@ export const metadata: Metadata = {
     template: '%s | 心智 XINZHI'
   },
   description: '从剧本到成片，心智让每个想象拥有可被观看的形态。',
+  icons: {
+    icon: [{ url: '/brand/xinzhi-app-icon.svg', type: 'image/svg+xml' }],
+    shortcut: '/brand/xinzhi-app-icon-192.png',
+    apple: '/brand/xinzhi-apple-touch-icon.png'
+  },
   openGraph: {
     title: '心智 XINZHI | AI 漫剧制作',
     description: '从剧本到成片，心智让每个想象拥有可被观看的形态。',

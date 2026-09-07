@@ -1,6 +1,6 @@
 schema_version: 1
 project: xinzhi_portal_and_script_library
-updated_at: "2026-09-06"
+updated_at: "2026-09-07"
 phase: formal_development
 progress_percent: 97
 progress_basis: historical_feature_completion_estimate_not_release_acceptance
@@ -15,6 +15,7 @@ architecture:
 
 capabilities:
   task_temporary_artifact_management: complete
+  brand_identity_logo_system: complete
   brand_portal: complete
   portal_pv_playback: complete
   managed_showcase_posters: complete
@@ -95,6 +96,7 @@ next_milestones:
 
 source_documents:
   latest_release_audit: docs/AUDIT-2026-09-06.md
+  brand_identity: docs/BRAND_IDENTITY.md
   project_structure: docs/PROJECT_STRUCTURE.md
   architecture_decisions: docs/llm/DECISIONS.md
   deployment_runbook: docs/DEPLOYMENT.md

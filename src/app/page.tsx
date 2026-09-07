@@ -1,4 +1,5 @@
 import { Icons } from '@/components/icons';
+import { XinzhiBrand } from '@/components/xinzhi-brand';
 import { HeroVideo } from '@/features/portal/components/hero-video';
 import {
   MobileNavigation,
@@ -55,12 +56,11 @@ export default function Page() {
       <header className='fixed inset-x-0 top-0 z-50 border-b border-white/10 bg-[#0b0c0e]/70 backdrop-blur-xl'>
         <div className='mx-auto flex h-[72px] max-w-[1480px] items-center justify-between px-5 sm:px-8 lg:px-12'>
           <a href='#home' className='group flex items-center gap-3' aria-label='心智首页'>
-            <span className='grid size-8 place-items-center border border-white/70 text-[11px] font-semibold tracking-[-0.08em] transition-colors group-hover:border-[#d84a3f] group-hover:text-[#d84a3f]'>
-              心智
-            </span>
-            <span className='hidden text-[11px] tracking-[0.22em] text-white/60 sm:block'>
-              XINZHI PICTURES
-            </span>
+            <XinzhiBrand
+              markSize={34}
+              className='text-[#f4f0e8] transition-opacity group-hover:opacity-[.78]'
+              descriptorClassName='hidden sm:block'
+            />
           </a>
 
           <nav className='hidden items-center gap-7 md:flex' aria-label='主导航'>

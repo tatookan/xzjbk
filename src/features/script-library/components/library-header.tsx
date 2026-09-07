@@ -1,6 +1,7 @@
 'use client';
 
 import { Icons } from '@/components/icons';
+import { XinzhiBrand } from '@/components/xinzhi-brand';
 import { useScriptLibraryDemo } from '@/features/script-library/components/demo-context';
 import {
   HeartPointAmount,
@@ -46,12 +47,11 @@ export function LibraryHeader() {
       <div className='mx-auto flex min-h-16 max-w-[1480px] items-center justify-between gap-4 px-5 sm:px-8 lg:px-12'>
         <div className='flex min-w-0 items-center gap-7'>
           <Link href='/' className='flex shrink-0 items-center gap-3' aria-label='返回心智门户'>
-            <span className='grid size-8 place-items-center border border-white/70 text-[11px] font-semibold tracking-[-0.08em]'>
-              心智
-            </span>
-            <span className='hidden text-[11px] tracking-[0.2em] text-white/48 sm:block'>
-              SCRIPT LIBRARY
-            </span>
+            <XinzhiBrand
+              descriptor='SCRIPT LIBRARY'
+              markSize={32}
+              descriptorClassName='hidden sm:block'
+            />
           </Link>
           <nav className='flex items-center gap-5 overflow-x-auto text-sm' aria-label='剧本库导航'>
             {links.map((link) => (

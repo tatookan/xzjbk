@@ -28,7 +28,7 @@ next-shadcn-dashboard-starter/
 │   ├── styles/               全局视觉样式
 │   └── lib/                  小型通用工具
 ├── drizzle/                  数据库版本和升级记录
-├── public/                   门户固定图片和 PV 视频
+├── public/                   品牌标志、门户固定图片和 PV 视频
 ├── scripts/                  初始化、检查、备份等运维脚本
 ├── docs/                     项目、部署和 LLM Wiki 文档
 ├── var/                      上传、备份与临时任务目录，运行内容不提交 Git
@@ -105,7 +105,9 @@ src/app/
 
 - `src/styles/globals.css`：全站颜色、字体、动画和响应式样式。
 - `src/components/icons.tsx`：统一图标入口。
+- `src/components/xinzhi-brand.tsx`：全站复用的心智标志与横版品牌组合。
 - `src/components/ui/`：多个页面复用的基础 UI。
+- `public/brand/`：彩色、单色、应用图标和高清 PNG 品牌资产。
 - `public/portal/`：门户固定图片、封面和两支 PV 视频。
 
 `public` 中的内容可以被浏览器直接访问，因此完整剧本绝不能放在这里。
@@ -257,6 +259,8 @@ API 路由只负责四件事：
 ### `docs`
 
 - `PROJECT_STRUCTURE.md`：当前这份项目结构说明。
+- `BRAND_IDENTITY.md`：Logo 概念、颜色、资产位置和使用规则。
+- `brand/xinzhi-brand-concept.png`：用户确认的品牌概念板视觉参考。
 - `DEPLOYMENT.md`：部署、HTTPS、备份和恢复手册。
 - `llm/README.md`：模型进入项目的阅读入口。
 - `llm/STATE.yaml`：当前阶段和待办状态。

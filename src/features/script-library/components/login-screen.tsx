@@ -1,6 +1,7 @@
 'use client';
 
 import { Icons } from '@/components/icons';
+import { XinzhiBrand } from '@/components/xinzhi-brand';
 import { authClient } from '@/modules/identity/auth-client';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -95,10 +96,7 @@ export function LoginScreen() {
       <section className='flex min-h-screen flex-col px-5 py-6 sm:px-10 lg:px-16 xl:px-24'>
         <div className='flex items-center justify-between'>
           <Link href='/' className='flex items-center gap-3' aria-label='返回心智门户'>
-            <span className='grid size-9 place-items-center border border-white/70 text-[11px] font-semibold tracking-[-0.08em]'>
-              心智
-            </span>
-            <span className='text-[11px] tracking-[0.2em] text-white/44'>SCRIPT LIBRARY</span>
+            <XinzhiBrand descriptor='SCRIPT LIBRARY' markSize={36} />
           </Link>
           <Link
             href='/scripts'

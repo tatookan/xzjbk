@@ -10,8 +10,9 @@
 2. `docs/llm/STATE.yaml`：项目当前阶段、已完成能力、限制和下一步。
 3. `docs/llm/DECISIONS.md`：已经确认、不能随意推翻的产品与架构决策。
 4. `docs/PROJECT_STRUCTURE.md`：需要理解目录或改动范围时阅读。
-5. `docs/DEPLOYMENT.md`：涉及上线、环境变量、备份或恢复时阅读。
-6. `README.md`：开发命令和项目总体说明。
+5. `docs/BRAND_IDENTITY.md`：涉及 Logo、颜色或品牌资产时阅读。
+6. `docs/DEPLOYMENT.md`：涉及上线、环境变量、备份或恢复时阅读。
+7. `README.md`：开发命令和项目总体说明。
 
 完成上述阅读后，再检查当前代码和 `git status`。代码是实际行为的最终依据；如果文档与代码不一致，先确认差异，不要静默假设某一方正确。
 
