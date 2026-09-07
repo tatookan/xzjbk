@@ -1,9 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title">
-  <title id="title">心智单色标志</title>
-  <path
-    fill="#130F0F"
-    fill-rule="evenodd"
-    d="M25 7 58 3v33l-33 5V7Zm9 10v13l15-2V15l-15 2ZM6 29l33-5v33L6 61V29Zm9 8v13l15-2V35l-15 2Z"
-  />
-  <path fill="#F2EEE6" d="m25 26 14-2v13l-14 2V26Z" />
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 136" role="img" aria-labelledby="title">
+  <title id="title">心智双画幅标志</title>
+  <path fill="#130F0F" d="M10 53Q10 50 14 51L43 58V64L29 66Q27 66 27 69V102L74 91Q76 90.5 76 88V83L80 84V109Q80 112 77 113L14 127Q10 128 10 123Z" />
+  <path fill="#130F0F" d="M42 27L112 8Q117 6.5 117 12V92Q117 97 112 95.5L80 87V84Q80 82 83 81.5L94 79.5V36L49 48.5Q47 49 47 52V63.5L42 62.5Z" />
+  <path fill="#130F0F" d="M44 58.5L73 64Q76 64.5 76 68V82.5L47 76Q44 75.5 44 72.5Z" />
 </svg>
