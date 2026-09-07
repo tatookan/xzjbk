@@ -97,8 +97,12 @@ export default function Page() {
                 <ArrowLink href='#studio' tone='light'>
                   进入心智 Studio
                 </ArrowLink>
-                <ArrowLink href='#works' tone='outline'>
-                  查看作品
+                <ArrowLink
+                  href={scriptLibraryUrl}
+                  external={scriptLibraryUrl.startsWith('http')}
+                  tone='outline'
+                >
+                  进入剧本库
                 </ArrowLink>
               </div>
             </div>
