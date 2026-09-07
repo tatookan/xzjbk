@@ -10,7 +10,7 @@
 
 1. 准备一台安装了 Docker Engine、Compose 插件和 HTTPS 反向代理的 Linux 服务器。
 2. 复制 `env.production.example.txt` 为 `.env.production`，将权限设置为 `600`，替换全部占位值。
-3. `NEXT_PUBLIC_APP_URL` 必须是最终 HTTPS 域名。两个密钥必须分别随机生成且不能相同。
+3. `NEXT_PUBLIC_APP_URL` 必须是最终 HTTPS 域名；`NEXT_PUBLIC_STUDIO_CN_URL` 和 `NEXT_PUBLIC_STUDIO_GLOBAL_URL` 分别保持为国内版、海外版 Studio 的正式入口。两个密钥必须分别随机生成且不能相同。
 4. `DATABASE_URL` 中的主机名使用 `database`。数据库密码应使用 URL 安全字符；如果包含特殊字符，需要先做 URL 编码。
 5. 应用、备份、备份校验与自检统一使用容器 UID/GID `1000:1000`，与私有文件 0600 权限匹配。不要改成宿主登录用户 ID。在项目目录执行 `sudo install -d -m 0700 -o 1000 -g 1000 var/backups` 准备备份目录；部署用户 ID 不同时通过 sudo 管理备份。旧 BACKUP_UID/BACKUP_GID 配置已不再使用。
 6. 执行：
