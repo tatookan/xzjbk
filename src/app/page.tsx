@@ -13,6 +13,7 @@ const studioCnUrl =
   'https://studio.xinsee.cc/v2';
 const studioGlobalUrl = process.env.NEXT_PUBLIC_STUDIO_GLOBAL_URL ?? 'https://newxzs.xinsee.cc/';
 const scriptLibraryUrl = process.env.NEXT_PUBLIC_SCRIPT_LIBRARY_URL ?? '/scripts';
+const xinshuUrl = process.env.NEXT_PUBLIC_XINSHU_URL ?? 'https://drama.xinsee.cc:9444';
 
 const navItems: PortalNavItem[] = [
   { label: '首页', href: '#home' },
@@ -22,7 +23,8 @@ const navItems: PortalNavItem[] = [
     label: '剧本库',
     href: scriptLibraryUrl,
     external: scriptLibraryUrl.startsWith('http')
-  }
+  },
+  { label: '心术', href: xinshuUrl, external: true }
 ];
 
 function ArrowLink({
@@ -87,9 +89,9 @@ export default function Page() {
               AI 漫剧制作
             </p>
             <h1 className='portal-reveal portal-reveal-delay font-serif text-[clamp(4.2rem,10vw,9.5rem)] leading-[0.82] font-medium tracking-[-0.075em] text-[#f7f2e9]'>
-              让故事
+              用心做
               <br />
-              先一步上映
+              用户爱看的短剧
             </h1>
             <div className='portal-reveal portal-reveal-delay-2 mt-8 flex max-w-[690px] flex-col justify-between gap-7 border-t border-white/25 pt-6 sm:flex-row sm:items-end'>
               <p className='max-w-md text-[15px] leading-7 text-white/72 sm:text-base'>
@@ -185,7 +187,7 @@ export default function Page() {
       <footer className='bg-[#0b0c0e] px-5 py-8 text-[11px] tracking-[0.18em] text-white/40 sm:px-8 lg:px-12'>
         <div className='mx-auto flex max-w-[1480px] flex-col gap-3 sm:flex-row sm:items-center sm:justify-between'>
           <span>© 2026 XINZHI PICTURES</span>
-          <span>AI 漫剧，让故事先一步上映</span>
+          <span>用心做用户爱看的短剧</span>
         </div>
       </footer>
     </main>
