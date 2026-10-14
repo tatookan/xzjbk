@@ -11,8 +11,7 @@ const studioCnUrl =
   process.env.NEXT_PUBLIC_STUDIO_CN_URL ??
   process.env.NEXT_PUBLIC_STUDIO_URL ??
   'https://studio.xinsee.cc/v2';
-const studioGlobalUrl =
-  process.env.NEXT_PUBLIC_STUDIO_GLOBAL_URL ?? 'https://overseas.studio.xinsee.cc/v2';
+const studioGlobalUrl = process.env.NEXT_PUBLIC_STUDIO_GLOBAL_URL ?? 'https://newxzs.xinsee.cc/';
 const scriptLibraryUrl = process.env.NEXT_PUBLIC_SCRIPT_LIBRARY_URL ?? '/scripts';
 
 const navItems: PortalNavItem[] = [
