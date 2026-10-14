@@ -33,7 +33,7 @@ const scriptInputSchema = z
     previewUnitLabel: z.enum(['段', '场']),
     presentationMode: z.enum(['解说', '演绎']),
     packageMode: z.enum(['bilingual-package', 'parallel-production']),
-    price: z.coerce.number().int().positive().max(100_000_000),
+    price: z.coerce.number().int().nonnegative().max(100_000_000),
     episodes: z.coerce.number().int().positive().max(100_000),
     status: z.enum(['draft', 'available']),
     tags: z.array(z.string().trim().min(1).max(40)).max(20),
@@ -41,6 +41,13 @@ const scriptInputSchema = z
     previewVisibleCount: z.coerce.number().int().positive().max(80)
   })
   .superRefine((value, context) => {
+    if (value.status === 'available' && value.price < 1) {
+      context.addIssue({
+        code: 'custom',
+        path: ['price'],
+        message: '正式上架前必须设置大于零的价格'
+      });
+    }
     if (value.sourceUnitCount < value.preview.length) {
       context.addIssue({
         code: 'custom',

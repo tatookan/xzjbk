@@ -15,12 +15,14 @@ async function main() {
   const publicRoutes = [
     '/',
     '/scripts',
+    '/agent',
     '/login',
     '/terms',
     '/privacy',
     '/api/v1/health',
     '/api/v1/readiness',
-    '/api/v1/showcase-posters'
+    '/api/v1/showcase-posters',
+    '/api/agent/v1/skill/version'
   ];
   for (const path of publicRoutes) {
     const response = await request(path);
@@ -50,6 +52,8 @@ async function main() {
   expectStatus('guest account protection', accountResponse, 401);
   const adminResponse = await request('/api/v1/admin/orders');
   expectStatus('guest administrator protection', adminResponse, 401);
+  const agentImportResponse = await request('/api/agent/v1/imports', { method: 'POST' });
+  expectStatus('missing Agent Key protection', agentImportResponse, 401);
 
   const crossSiteResponse = await request('/api/v1/auth/register', {
     method: 'POST',

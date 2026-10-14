@@ -27,6 +27,19 @@ services:
         condition: service_healthy
     restart: 'no'
 
+  storage-init:
+    image: postgres:17-alpine
+    user: '0:0'
+    command:
+      [
+        'sh',
+        '-c',
+        'chown -R 1000:1000 /data/xinzhi-storage && chmod 0700 /data/xinzhi-storage'
+      ]
+    volumes:
+      - xinzhi-storage:/data/xinzhi-storage
+    restart: 'no'
+
   app:
     build:
       context: .
@@ -49,6 +62,8 @@ services:
       database:
         condition: service_healthy
       migrate:
+        condition: service_completed_successfully
+      storage-init:
         condition: service_completed_successfully
     healthcheck:
       test:
@@ -79,6 +94,8 @@ services:
     depends_on:
       database:
         condition: service_healthy
+      storage-init:
+        condition: service_completed_successfully
 
   backup:
     profiles: ['ops']

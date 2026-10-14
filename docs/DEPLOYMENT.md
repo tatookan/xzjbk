@@ -12,12 +12,12 @@
 2. 复制 `env.production.example.txt` 为 `.env.production`，将权限设置为 `600`，替换全部占位值。
 3. `NEXT_PUBLIC_APP_URL` 必须是最终 HTTPS 域名；`NEXT_PUBLIC_STUDIO_CN_URL` 和 `NEXT_PUBLIC_STUDIO_GLOBAL_URL` 分别保持为国内版、海外版 Studio 的正式入口。两个密钥必须分别随机生成且不能相同。
 4. `DATABASE_URL` 中的主机名使用 `database`。数据库密码应使用 URL 安全字符；如果包含特殊字符，需要先做 URL 编码。
-5. 应用、备份、备份校验与自检统一使用容器 UID/GID `1000:1000`，与私有文件 0600 权限匹配。不要改成宿主登录用户 ID。在项目目录执行 `sudo install -d -m 0700 -o 1000 -g 1000 var/backups` 准备备份目录；部署用户 ID 不同时通过 sudo 管理备份。旧 BACKUP_UID/BACKUP_GID 配置已不再使用。
+5. 应用、备份、备份校验与自检统一使用容器 UID/GID `1000:1000`，与私有文件 0600 权限匹配。不要改成宿主登录用户 ID。`storage-init` 会在应用与自检启动前自动把新建的私有存储卷初始化为 `1000:1000` 和 `0700`；不要跳过这个一次性服务。在项目目录执行 `sudo install -d -m 0700 -o 1000 -g 1000 var/backups` 准备备份目录；部署用户 ID 不同时通过 sudo 管理备份。旧 BACKUP_UID/BACKUP_GID 配置已不再使用。
 6. 执行：
 
 ```bash
 docker compose --env-file .env.production -f compose.production.yaml up -d --build
-docker compose --env-file .env.production -f compose.production.yaml --profile ops run --rm preflight
+docker compose --env-file .env.production -f compose.production.yaml --profile ops run --rm --build preflight
 EXPECT_PRODUCTION_HEADERS=true SMOKE_BASE_URL=https://scripts.example.com npm run deploy:smoke
 ```
 
@@ -46,7 +46,7 @@ docker compose --env-file .env.production -f compose.production.yaml stop app
 docker compose --env-file .env.production -f compose.production.yaml --profile ops run --rm backup
 BACKUP_NAME=xinzhi-TIMESTAMP docker compose --env-file .env.production -f compose.production.yaml --profile ops run --rm backup-verify
 docker compose --env-file .env.production -f compose.production.yaml up -d --build
-docker compose --env-file .env.production -f compose.production.yaml --profile ops run --rm preflight
+docker compose --env-file .env.production -f compose.production.yaml --profile ops run --rm --build preflight
 EXPECT_PRODUCTION_HEADERS=true SMOKE_BASE_URL=https://scripts.example.com npm run deploy:smoke
 ```
 
@@ -83,7 +83,7 @@ EXPECT_PRODUCTION_HEADERS=true SMOKE_BASE_URL=https://scripts.example.com npm ru
 
 2026-09-06 已在本机 PostgreSQL 14.20 完成隔离回归和恢复演练。生产目标仍为 PostgreSQL 17；本机没有 Docker，所以干净 Linux 容器、UID/GID 1000 实际运行、目标域名 TLS 和 PostgreSQL 17 的验收仍须在目标环境执行，不能据本地构建通过宣称完成。
 
-发布本轮更新时先执行新增迁移 `0005_points-operation-id`。后台剧本编辑/删除现在要求携带列表或详情中 version 对应的 `If-Match: "版本号"`；调账接口要求稳定的 operationId，网络重试必须复用原值。前后端应同版发布。
+发布本轮更新时必须执行到最新迁移 `0007_agent-access`。生产构建会同时生成 `public/agent/xinzhi-script-uploader.zip`，部署后应检查 `/agent`、`/api/agent/v1/skill/version` 和Skill下载地址。后台剧本编辑/删除要求携带列表或详情中 version 对应的 `If-Match: "版本号"`；调账接口要求稳定的 operationId，网络重试必须复用原值。前后端应同版发布。
 
 ## 上线检查清单
 
@@ -93,6 +93,9 @@ EXPECT_PRODUCTION_HEADERS=true SMOKE_BASE_URL=https://scripts.example.com npm ru
 - 购买只扣费一次，成交后其他用户只能看到已售出卡片。
 - 买家可以从详情页和个人中心下载三份交付文件。
 - 管理员上传、编辑、删除、注册码、调账和订单查询正常。
+- `/agent` 可公开访问并能下载官方Skill；版本接口返回当前版本、同域HTTPS更新地址和正确的SHA-256。
+- 未携带Key不能调用Agent导入接口；关闭用户灰度资格后其全部Key立即失效。
+- Agent导入只能生成价格为0的草稿，最终定价和发布仍只能由管理员完成。
 - 支付宝按钮保持“暂未开放”，`PAYMENT_DRIVER=disabled`。
 - `/api/v1/readiness` 返回 200，生产安全响应头存在。
 - 数据库卷、私有文件卷和异机备份均已配置。

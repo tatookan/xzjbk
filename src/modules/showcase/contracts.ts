@@ -1,5 +1,14 @@
 export type ShowcaseLinkType = 'none' | 'script' | 'external';
 
+export const DEFAULT_SHOWCASE_REEL_SPEED = 30;
+export const MIN_SHOWCASE_REEL_SPEED = 15;
+export const MAX_SHOWCASE_REEL_SPEED = 60;
+
+export interface ShowcaseSettingsDto {
+  reelSpeedPxPerSecond: number;
+  updatedAt: string | null;
+}
+
 export interface ShowcasePosterDto {
   id: string;
   title: string;

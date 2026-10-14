@@ -1,4 +1,9 @@
-import { createPoster, listAdminPosters, reorderPosters } from '@/modules/showcase/service';
+import {
+  createPoster,
+  getShowcaseSettings,
+  listAdminPosters,
+  reorderPosters
+} from '@/modules/showcase/service';
 import { preparePosterImage, readPosterFile } from '@/modules/showcase/poster-image';
 import { readPosterInput, reorderPostersSchema } from '@/modules/showcase/validation';
 import { requireAdmin } from '@/modules/identity/session';
@@ -8,7 +13,8 @@ import { assertTrustedOrigin, readJson } from '@/shared/api/request';
 export function GET(request: Request) {
   return withApiHandler(request, async () => {
     await requireAdmin(request.headers);
-    return { data: { items: await listAdminPosters() } };
+    const [items, settings] = await Promise.all([listAdminPosters(), getShowcaseSettings()]);
+    return { data: { items, settings } };
   });
 }
 

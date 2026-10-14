@@ -1,11 +1,22 @@
 import { and, asc, eq, inArray, isNull, sql } from 'drizzle-orm';
 
 import { getDatabase } from '@/infrastructure/database/client';
-import { auditLogs, mediaAssets, scripts, showcasePosters } from '@/infrastructure/database/schema';
+import {
+  auditLogs,
+  mediaAssets,
+  scripts,
+  showcasePosters,
+  showcaseSettings
+} from '@/infrastructure/database/schema';
 import { getStorageProvider } from '@/infrastructure/storage';
 import { AppError } from '@/shared/api/errors';
 
-import type { ShowcasePosterDto, ShowcasePosterInput } from './contracts';
+import {
+  DEFAULT_SHOWCASE_REEL_SPEED,
+  type ShowcasePosterDto,
+  type ShowcasePosterInput,
+  type ShowcaseSettingsDto
+} from './contracts';
 import type { PreparedPosterImage } from './poster-image';
 
 type PosterRow = {
@@ -13,6 +24,55 @@ type PosterRow = {
   asset: typeof mediaAssets.$inferSelect;
   scriptSlug: string | null;
 };
+
+const SHOWCASE_SETTINGS_ID = 'portal';
+
+export async function getShowcaseSettings(): Promise<ShowcaseSettingsDto> {
+  const [settings] = await getDatabase()
+    .select()
+    .from(showcaseSettings)
+    .where(eq(showcaseSettings.id, SHOWCASE_SETTINGS_ID));
+
+  return {
+    reelSpeedPxPerSecond: settings?.reelSpeedPxPerSecond ?? DEFAULT_SHOWCASE_REEL_SPEED,
+    updatedAt: settings?.updatedAt.toISOString() ?? null
+  };
+}
+
+export async function updateShowcaseSettings(
+  reelSpeedPxPerSecond: number,
+  actorUserId: string
+): Promise<ShowcaseSettingsDto> {
+  const database = getDatabase();
+
+  await database.transaction(async (transaction) => {
+    const [previous] = await transaction
+      .select({ reelSpeedPxPerSecond: showcaseSettings.reelSpeedPxPerSecond })
+      .from(showcaseSettings)
+      .where(eq(showcaseSettings.id, SHOWCASE_SETTINGS_ID));
+
+    await transaction
+      .insert(showcaseSettings)
+      .values({ id: SHOWCASE_SETTINGS_ID, reelSpeedPxPerSecond, updatedAt: new Date() })
+      .onConflictDoUpdate({
+        target: showcaseSettings.id,
+        set: { reelSpeedPxPerSecond, updatedAt: new Date() }
+      });
+
+    await transaction.insert(auditLogs).values({
+      actorUserId,
+      action: 'showcase.settings.updated',
+      entityType: 'showcase_settings',
+      entityId: SHOWCASE_SETTINGS_ID,
+      metadata: {
+        previousReelSpeedPxPerSecond: previous?.reelSpeedPxPerSecond ?? DEFAULT_SHOWCASE_REEL_SPEED,
+        reelSpeedPxPerSecond
+      }
+    });
+  });
+
+  return getShowcaseSettings();
+}
 
 function toDto(row: PosterRow): ShowcasePosterDto {
   const { poster } = row;

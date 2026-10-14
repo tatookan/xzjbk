@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 interface PortalPoster {
   id: string;
@@ -10,6 +10,8 @@ interface PortalPoster {
   imageUrl: string;
   linkHref: string | null;
 }
+
+const DEFAULT_REEL_SPEED = 30;
 
 const fallbackWorks: PortalPoster[] = [
   {
@@ -50,7 +52,7 @@ function Cover({ poster, duplicate }: { poster: PortalPoster; duplicate: boolean
         alt={duplicate ? '' : `${poster.title}漫剧封面`}
         fill
         unoptimized={poster.imageUrl.startsWith('/api/')}
-        sizes='(max-width: 640px) 68vw, 25vw'
+        sizes='(max-width: 767px) 56vw, 18vw'
         className='object-cover'
       />
       <div className='portal-cover-copy'>
@@ -81,6 +83,10 @@ function Cover({ poster, duplicate }: { poster: PortalPoster; duplicate: boolean
 export function WorkReel() {
   const [works, setWorks] = useState<PortalPoster[]>(fallbackWorks);
   const [managed, setManaged] = useState(false);
+  const [loopCopies, setLoopCopies] = useState(2);
+  const [reelSpeed, setReelSpeed] = useState(DEFAULT_REEL_SPEED);
+  const reelRef = useRef<HTMLDivElement>(null);
+  const trackRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -88,16 +94,62 @@ export function WorkReel() {
       .then(async (response) => {
         const payload = (await response.json()) as {
           success: boolean;
-          data?: { items: PortalPoster[] };
+          data?: {
+            items: PortalPoster[];
+            settings?: { reelSpeedPxPerSecond: number };
+          };
         };
         if (response.ok && payload.success && payload.data) {
           setWorks(payload.data.items);
+          setReelSpeed(payload.data.settings?.reelSpeedPxPerSecond ?? DEFAULT_REEL_SPEED);
           setManaged(true);
         }
       })
       .catch(() => undefined);
     return () => controller.abort();
   }, []);
+
+  useEffect(() => {
+    const reel = reelRef.current;
+    if (!reel || works.length === 0) return;
+
+    const updateLoopCopies = () => {
+      if (window.matchMedia('(max-width: 767px)').matches) {
+        setLoopCopies(1);
+        return;
+      }
+
+      const gap = 18;
+      const cardWidth = Math.min(280, Math.max(190, window.innerWidth * 0.18));
+      const visibleCount = Math.ceil((reel.clientWidth + gap) / (cardWidth + gap));
+      setLoopCopies(Math.max(1, Math.ceil((visibleCount + 1) / works.length)));
+    };
+
+    updateLoopCopies();
+    const observer = new ResizeObserver(updateLoopCopies);
+    observer.observe(reel);
+    return () => observer.disconnect();
+  }, [works.length]);
+
+  const loopWorks = useMemo(
+    () => Array.from({ length: loopCopies }, () => works).flat(),
+    [loopCopies, works]
+  );
+
+  useEffect(() => {
+    const track = trackRef.current;
+    if (!track || loopWorks.length === 0) return;
+
+    const updateDuration = () => {
+      const cycleWidth = track.scrollWidth / 2;
+      track.style.setProperty('--portal-reel-duration', `${Math.max(1, cycleWidth / reelSpeed)}s`);
+    };
+
+    updateDuration();
+    const observer = new ResizeObserver(updateDuration);
+    observer.observe(track);
+    return () => observer.disconnect();
+  }, [loopWorks.length, reelSpeed]);
 
   if (managed && works.length === 0) {
     return (
@@ -110,9 +162,9 @@ export function WorkReel() {
   }
 
   return (
-    <div className='portal-reel-shell'>
-      <div className='portal-reel-track'>
-        {[...works, ...works].map((work, index) => (
+    <div ref={reelRef} className='portal-reel-shell'>
+      <div ref={trackRef} className='portal-reel-track'>
+        {[...loopWorks, ...loopWorks].map((work, index) => (
           <Cover key={`${work.id}-${index}`} poster={work} duplicate={index >= works.length} />
         ))}
       </div>

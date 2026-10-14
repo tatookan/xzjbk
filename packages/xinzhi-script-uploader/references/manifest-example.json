@@ -1,0 +1,73 @@
+{
+  "schemaVersion": 1,
+  "skillVersion": "1.1.0",
+  "projectId": "npc-butler",
+  "packageId": "20260913-r1",
+  "packageMode": "bilingual-package",
+  "idempotencyKey": "b138d51c-773d-4d60-a2ef-446fa9a30b55",
+  "materialFingerprint": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+  "metadata": {
+    "title": "NPC管家又被欺负了",
+    "englishTitle": "The NPC Butler Gets Bullied Again",
+    "genre": "BL",
+    "logline": "从完整导演阐述原样提取的一句话故事。",
+    "synopsis": "从完整导演阐述原样提取并保留换行的故事梗概。",
+    "directorStatement": "500–1000中文字符的制作执行摘要。",
+    "previewRationale": "说明人物、关系、世界观、冲突钩子，以及避开的成人内容和剧透。",
+    "sourceUnitCount": 415,
+    "previewUnitLabel": "段",
+    "presentationMode": "解说",
+    "packageMode": "bilingual-package",
+    "episodes": 23,
+    "tags": ["ABO", "无限流", "多人关系"],
+    "preview": [
+      {
+        "en": "## EP01\n### English\nComplete English episode block.",
+        "zh": "## EP01\n### 中文\n完整中文单集区块。"
+      }
+    ],
+    "previewVisibleCount": 1
+  },
+  "validation": {
+    "englishWordCount": 9920,
+    "episodeFormula": "round(9920 / 15000 * 35)",
+    "episodes": 23,
+    "sourceUnitCount": 415,
+    "previewEpisodeCount": 1,
+    "previewVisibleCount": 1,
+    "adultContentCheck": "passed",
+    "coverDimensions": [1024, 1536]
+  },
+  "files": {
+    "cover": {
+      "path": "cover/cover.webp",
+      "sourcePath": "01-封面/正式封面.webp",
+      "size": 845321,
+      "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    "english": {
+      "path": "scripts/english.md",
+      "sourcePath": "02-美国本土化/story-US-localized-English.md",
+      "size": 99821,
+      "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+    },
+    "secondary": {
+      "path": "scripts/bilingual.md",
+      "sourcePath": "02-美国本土化/story-US-localized-bilingual.md",
+      "size": 189452,
+      "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+    },
+    "director": {
+      "path": "director/director-statement.md",
+      "sourcePath": "03-导演阐述/story-导演阐述.md",
+      "size": 24881,
+      "sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+    },
+    "preview": {
+      "path": "preview/preview.json",
+      "sourcePath": "03-试读版/story-中英对照试读版.md",
+      "size": 26314,
+      "sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+    }
+  }
+}

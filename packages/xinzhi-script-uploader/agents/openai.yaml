@@ -1,0 +1,6 @@
+interface:
+  display_name: "心智剧本入库"
+  short_description: "通过官方API将本地剧本资料整理为后台待审核草稿"
+  default_prompt: "Use $xinzhi-script-uploader to prepare and upload a local script folder as a draft."
+policy:
+  allow_implicit_invocation: true

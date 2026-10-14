@@ -1,9 +1,9 @@
 schema_version: 1
 project: xinzhi_portal_and_script_library
-updated_at: "2026-09-07"
-phase: formal_development
-progress_percent: 97
-progress_basis: historical_feature_completion_estimate_not_release_acceptance
+updated_at: "2026-09-13"
+phase: production
+progress_percent: 98
+progress_basis: current_release_deployed_and_accepted_with_operational_hardening_remaining
 
 architecture:
   style: api_first_modular_monolith
@@ -18,8 +18,15 @@ capabilities:
   brand_identity_logo_system: complete
   brand_portal: complete
   portal_pv_playback: complete
+  portal_media_optimization: complete
+  browser_image_precompression: complete
   managed_showcase_posters: complete
+  managed_showcase_reel_speed: complete
   public_script_catalog: complete
+  public_script_catalog_filtering: complete
+  external_agent_skill_draft_import: v1_1_complete_production
+  agent_deterministic_release_package: complete_production
+  agent_access_and_key_management: complete_production
   whitelist_registration: complete
   member_login_and_session: complete
   member_avatar_and_account_menu: complete
@@ -41,7 +48,8 @@ business_invariants:
   - sold_script_keeps_public_sold_card_but_hides_detail_from_other_users
   - full_script_files_never_enter_public_or_preview_responses
   - full_delivery_zip_requires_completed_buyer_or_admin_authorization
-  - only_admin_can_upload_or_edit_scripts
+  - only_admin_or_granted_agent_key_holder_can_create_script_drafts
+  - only_admin_can_price_publish_or_edit_imported_scripts
   - registration_requires_single_use_invite_code
   - registration_requires_terms_and_privacy_consent_with_versioned_audit_fields
   - one_yuan_equals_one_hundred_heart_points
@@ -54,42 +62,54 @@ deployment_state:
   production_build_verified: true
   deployment_preflight_verified: true
   backup_create_and_verify_tested: true
-  production_server_deployed: false
-  production_domain_configured: false
+  production_server_deployed: true
+  production_domain_configured: true
+  production_entry: https://drama.xinsee.cc:8443
+  production_install_root: /srv/xinzhi/app
+  production_database_initialized_clean: true
+  production_admin_bootstrapped: true
+  deployed_release: 20260913-agent-skill-v1.1.0
+  legacy_flagent_stopped: true
+  legacy_flagent_volumes_retained: true
   alipay_enabled: false
 
 release_audit:
-  reviewed_at: "2026-09-06"
+  reviewed_at: "2026-09-08"
   baseline_commit: bd27bd7
-  result: local_fixes_verified_target_acceptance_pending
+  result: target_container_domain_auth_and_backup_acceptance_passed
   report: docs/AUDIT-2026-09-06.md
   implemented_findings: 7
   locally_verified_findings: 5
-  pending_target_environment_findings:
-    - A-02
-    - A-03
-  production_acceptance_complete: false
-  docker_build_and_runtime_verified: false
+  pending_target_environment_findings: []
+  production_acceptance_complete: true
+  docker_build_and_runtime_verified: true
   authenticated_concurrency_tests_run_this_audit: true
   restore_drill_run_this_audit: true
   local_database_test_version: PostgreSQL_14_20
-  isolated_database_regression_groups: 9
+  isolated_database_regression_groups: 10
   synthetic_api_browser_scenarios: 3
-  latest_migration: 0005_points-operation-id
+  latest_migration: 0007_agent-access
+  production_database_version: PostgreSQL_17
+  production_smoke_passed: true
+  production_admin_login_passed: true
+  production_backup_verified: true
 
 known_constraints:
-  - release_readiness_requires_target_docker_linux_postgresql_17_acceptance
-  - local_next_build_and_smoke_do_not_verify_docker_runtime
   - payment_driver_must_remain_disabled_until_alipay_adapter_exists
   - storage_driver_must_remain_local_until_oss_adapter_exists
   - local_storage_requires_persistent_disk_and_off_host_backups
-  - docker_runtime_was_not_available_on_the_development_mac
+  - production_currently_has_only_an_on_host_verified_backup
+  - production_host_currently_has_no_swap_and_needs_resilience_hardening
+  - production_database_is_clean_and_contains_only_the_bootstrapped_admin
   - demo_context_filename_is_legacy_but_the_data_flow_is_formal
+  - agent_parallel_production_mode_requires_real_sample_discovery_before_enablement
 
 next_milestones:
-  - run_business_regression_and_restore_drill_on_target_postgresql_17_and_container_uids
-  - prepare_production_server_domain_tls_and_secrets
-  - run_docker_compose_and_full_acceptance_on_the_target_server
+  - populate_production_scripts_posters_and_invite_codes_through_admin_ui
+  - collect_real_parallel_production_sample_before_enabling_that_mode
+  - configure_scheduled_off_host_backups_and_restore_drill
+  - add_swap_and_complete_host_security_hardening
+  - run_portal_performance_acceptance_on_real_external_networks
   - decide_when_to_integrate_alipay_desktop_recharge
   - replace_generic_legal_contact_and_operator_details_before_public_launch
   - implement_oss_adapter_only_when_storage_scale_requires_it
@@ -99,5 +119,7 @@ source_documents:
   brand_identity: docs/BRAND_IDENTITY.md
   project_structure: docs/PROJECT_STRUCTURE.md
   architecture_decisions: docs/llm/DECISIONS.md
+  agent_api_constitution: docs/agent/API_CONSTITUTION.md
+  agent_workspace_discovery: docs/agent/WORKSPACE_STANDARD_DISCOVERY.md
   deployment_runbook: docs/DEPLOYMENT.md
   developer_readme: README.md

@@ -1,18 +1,28 @@
 'use client';
 
 import { Icons } from '@/components/icons';
-import type { ShowcasePosterDto } from '@/modules/showcase/contracts';
+import type { ShowcasePosterDto, ShowcaseSettingsDto } from '@/modules/showcase/contracts';
+import { formatUploadBytes, IMAGE_UPLOAD_ACCEPT, prepareImageForUpload } from '@/lib/image-upload';
 import Image from 'next/image';
 import type { FormEvent } from 'react';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
 import { DemoModal } from './demo-modal';
+import { FileDropTarget } from './file-drop-target';
 
 type ApiEnvelope<T> = {
   success: boolean;
   data?: T;
   error?: { message?: string };
+};
+
+const POSTER_MAX_BYTES = 1024 * 1024;
+const DEFAULT_REEL_SPEED = 30;
+
+type AdminShowcaseData = {
+  items: ShowcasePosterDto[];
+  settings: ShowcaseSettingsDto;
 };
 
 function formatDate(value: string) {
@@ -29,13 +39,19 @@ function getFormError(payload: ApiEnvelope<unknown>, fallback: string) {
   return payload.error?.message ?? fallback;
 }
 
-async function fetchAdminPosters(): Promise<ShowcasePosterDto[]> {
+async function fetchAdminShowcase(): Promise<AdminShowcaseData> {
   const response = await fetch('/api/v1/admin/showcase-posters');
-  const payload = (await response.json()) as ApiEnvelope<{ items: ShowcasePosterDto[] }>;
+  const payload = (await response.json()) as ApiEnvelope<AdminShowcaseData>;
   if (!response.ok || !payload.success || !payload.data) {
     throw new Error(getFormError(payload, '海报列表读取失败'));
   }
-  return payload.data.items;
+  return payload.data;
+}
+
+function describeReelSpeed(speed: number) {
+  if (speed <= 24) return '舒缓';
+  if (speed <= 36) return '标准';
+  return '快速';
 }
 
 export function ShowcaseManager() {
@@ -47,11 +63,20 @@ export function ShowcaseManager() {
   const [deleting, setDeleting] = useState<ShowcasePosterDto | null>(null);
   const [saving, setSaving] = useState(false);
   const [sorting, setSorting] = useState(false);
+  const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imagePreparing, setImagePreparing] = useState(false);
+  const [imageResult, setImageResult] = useState<string | null>(null);
+  const [reelSpeed, setReelSpeed] = useState(DEFAULT_REEL_SPEED);
+  const [savedReelSpeed, setSavedReelSpeed] = useState(DEFAULT_REEL_SPEED);
+  const [speedSaving, setSpeedSaving] = useState(false);
 
   const loadPosters = async () => {
     try {
-      setPosters(await fetchAdminPosters());
+      const data = await fetchAdminShowcase();
+      setPosters(data.items);
+      setReelSpeed(data.settings.reelSpeedPxPerSecond);
+      setSavedReelSpeed(data.settings.reelSpeedPxPerSecond);
     } catch (error) {
       setLoadError(error instanceof Error ? error.message : '海报列表读取失败');
     } finally {
@@ -61,9 +86,12 @@ export function ShowcaseManager() {
 
   useEffect(() => {
     let active = true;
-    fetchAdminPosters()
-      .then((items) => {
-        if (active) setPosters(items);
+    fetchAdminShowcase()
+      .then((data) => {
+        if (!active) return;
+        setPosters(data.items);
+        setReelSpeed(data.settings.reelSpeedPxPerSecond);
+        setSavedReelSpeed(data.settings.reelSpeedPxPerSecond);
       })
       .catch((error: unknown) => {
         if (active) setLoadError(error instanceof Error ? error.message : '海报列表读取失败');
@@ -84,22 +112,57 @@ export function ShowcaseManager() {
 
   const openCreate = () => {
     setEditing(null);
+    setImageFile(null);
     setImagePreview(null);
+    setImageResult(null);
     setEditorOpen(true);
   };
 
   const openEdit = (poster: ShowcasePosterDto) => {
     setEditing(poster);
+    setImageFile(null);
     setImagePreview(null);
+    setImageResult(null);
     setEditorOpen(true);
+  };
+
+  const selectPosterImage = async (file: File) => {
+    setImagePreparing(true);
+    setImageResult(null);
+    try {
+      const prepared = await prepareImageForUpload(file, {
+        assetLabel: '海报图片',
+        maxBytes: POSTER_MAX_BYTES,
+        maxSizeLabel: '1 MB',
+        maxWidth: 1600,
+        maxHeight: 2400
+      });
+      setImageFile(prepared.file);
+      setImagePreview(URL.createObjectURL(prepared.file));
+      if (prepared.compressed) {
+        const result = `${formatUploadBytes(prepared.originalBytes)} → ${formatUploadBytes(prepared.outputBytes)}`;
+        setImageResult(`已在浏览器内自动压缩 · ${result}`);
+        toast.success(`海报已自动压缩：${result}`);
+      } else {
+        setImageResult(`图片已符合要求 · ${formatUploadBytes(prepared.outputBytes)}`);
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : '海报图片处理失败');
+    } finally {
+      setImagePreparing(false);
+    }
   };
 
   const savePoster = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (imagePreparing) {
+      toast.info('请等待图片压缩完成');
+      return;
+    }
     setSaving(true);
     const formData = new FormData(event.currentTarget);
-    const image = formData.get('image');
-    if (!editing && (!(image instanceof File) || image.size === 0)) {
+    if (imageFile) formData.set('image', imageFile);
+    if (!editing && !imageFile) {
       toast.error('请选择一张海报图片');
       setSaving(false);
       return;
@@ -123,7 +186,9 @@ export function ShowcaseManager() {
       );
       setEditorOpen(false);
       setEditing(null);
+      setImageFile(null);
       setImagePreview(null);
+      setImageResult(null);
       toast.success(editing ? '海报已更新' : '海报已上传');
     } catch {
       toast.error('当前无法连接海报服务');
@@ -157,6 +222,29 @@ export function ShowcaseManager() {
     }
   };
 
+  const saveReelSpeed = async () => {
+    setSpeedSaving(true);
+    try {
+      const response = await fetch('/api/v1/admin/showcase-posters/settings', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reelSpeedPxPerSecond: reelSpeed })
+      });
+      const payload = (await response.json()) as ApiEnvelope<{ settings: ShowcaseSettingsDto }>;
+      if (!response.ok || !payload.success || !payload.data) {
+        toast.error(getFormError(payload, '滚动速度保存失败'));
+        return;
+      }
+      setReelSpeed(payload.data.settings.reelSpeedPxPerSecond);
+      setSavedReelSpeed(payload.data.settings.reelSpeedPxPerSecond);
+      toast.success('首页海报滚动速度已更新');
+    } catch {
+      toast.error('当前无法连接海报设置服务');
+    } finally {
+      setSpeedSaving(false);
+    }
+  };
+
   const confirmDelete = async () => {
     if (!deleting) return;
     try {
@@ -183,8 +271,8 @@ export function ShowcaseManager() {
           <p className='text-[10px] tracking-[0.2em] text-[#d84a3f] uppercase'>Portal showcase</p>
           <h2 className='mt-2 font-serif text-4xl tracking-[-0.04em]'>首页滚动海报</h2>
           <p className='mt-3 max-w-2xl text-xs leading-6 text-white/38'>
-            这里的发布状态与顺序会直接同步到门户首页。上传图片会统一转为
-            WebP，并通过可替换的存储接口保存。
+            这里的发布状态与顺序会直接同步到门户首页。超限原图会先在浏览器本地高质量压缩，
+            再通过可替换的存储接口保存。
           </p>
         </div>
         <button
@@ -195,6 +283,69 @@ export function ShowcaseManager() {
           <Icons.add size={16} /> 上传海报
         </button>
       </div>
+
+      <section className='mb-7 grid gap-5 border-y border-white/10 py-5 lg:grid-cols-[minmax(0,1fr)_minmax(320px,0.8fr)] lg:items-center'>
+        <div>
+          <div className='flex items-baseline gap-3'>
+            <h3 className='text-sm font-medium text-white/82'>首页滚动速度</h3>
+            <span className='text-[10px] tracking-[0.16em] text-[#d84a3f] uppercase'>
+              {describeReelSpeed(reelSpeed)}
+            </span>
+          </div>
+          <p className='mt-2 max-w-xl text-xs leading-6 text-white/36'>
+            控制整个首页海报长廊的移动速度。保存后刷新门户即可看到效果，不受海报数量和屏幕宽度影响。
+          </p>
+          <div className='mt-4 flex flex-wrap gap-2'>
+            {[
+              { label: '舒缓', value: 20 },
+              { label: '标准', value: 30 },
+              { label: '快速', value: 45 }
+            ].map((preset) => (
+              <button
+                key={preset.value}
+                type='button'
+                onClick={() => setReelSpeed(preset.value)}
+                className={`border px-3 py-1.5 text-xs transition-colors ${
+                  reelSpeed === preset.value
+                    ? 'border-[#d84a3f] bg-[#d84a3f]/10 text-[#ec7c72]'
+                    : 'border-white/10 text-white/42 hover:border-white/24 hover:text-white/72'
+                }`}
+              >
+                {preset.label}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className='grid grid-cols-[1fr_auto] items-end gap-x-4 gap-y-3'>
+          <label htmlFor='showcase-reel-speed' className='text-xs text-white/48'>
+            精确速度
+          </label>
+          <output
+            htmlFor='showcase-reel-speed'
+            className='font-mono text-sm text-white/76 tabular-nums'
+          >
+            {reelSpeed} px/s
+          </output>
+          <input
+            id='showcase-reel-speed'
+            type='range'
+            min={15}
+            max={60}
+            step={1}
+            value={reelSpeed}
+            onChange={(event) => setReelSpeed(Number(event.target.value))}
+            className='h-1.5 w-full cursor-pointer accent-[#d84a3f]'
+          />
+          <button
+            type='button'
+            onClick={() => void saveReelSpeed()}
+            disabled={speedSaving || reelSpeed === savedReelSpeed}
+            className='h-9 min-w-20 bg-[#d84a3f] px-3 text-xs font-semibold whitespace-nowrap text-[#130f0f] disabled:cursor-not-allowed disabled:opacity-30'
+          >
+            {speedSaving ? '保存中' : '保存速度'}
+          </button>
+        </div>
+      </section>
 
       {loading ? (
         <div className='grid gap-3 md:grid-cols-2 xl:grid-cols-3' aria-label='正在读取海报'>
@@ -320,55 +471,78 @@ export function ShowcaseManager() {
       <DemoModal
         open={editorOpen}
         onClose={() => {
-          if (!saving) setEditorOpen(false);
+          if (!saving) {
+            setEditorOpen(false);
+            setImageFile(null);
+            setImagePreview(null);
+            setImageResult(null);
+          }
         }}
         title={editing ? '编辑首页海报' : '上传首页海报'}
         eyebrow='Portal poster'
       >
         <form onSubmit={savePoster} className='space-y-5'>
           <div>
-            <label htmlFor='poster-image' className='block text-xs text-white/56'>
+            <p className='block text-xs text-white/56'>
               海报图片{editing ? '（不选择则保留原图）' : ''}
-            </label>
-            <label
-              htmlFor='poster-image'
-              className='mt-2 grid min-h-44 cursor-pointer place-items-center overflow-hidden border border-dashed border-white/18 bg-white/[0.025] transition-colors hover:border-[#d84a3f]/70'
-            >
-              {imagePreview || editing ? (
-                <span className='relative block h-56 w-full'>
-                  <Image
-                    src={imagePreview ?? editing!.imageUrl}
-                    alt='海报预览'
-                    fill
-                    unoptimized
-                    sizes='560px'
-                    className='object-cover'
-                  />
-                  <span className='absolute inset-0 grid place-items-center bg-black/45 text-xs opacity-0 transition-opacity hover:opacity-100'>
-                    点击更换图片
-                  </span>
-                </span>
-              ) : (
-                <span className='text-center'>
-                  <Icons.upload className='mx-auto text-[#d84a3f]' size={22} />
-                  <span className='mt-3 block text-sm text-white/64'>选择海报图片</span>
-                  <span className='mt-1 block text-[10px] text-white/28'>
-                    JPG / PNG / WebP / AVIF，最大 12 MB
-                  </span>
-                </span>
-              )}
-            </label>
-            <input
-              id='poster-image'
-              name='image'
-              type='file'
-              accept='image/jpeg,image/png,image/webp,image/avif'
-              className='sr-only'
-              onChange={(event) => {
-                const file = event.target.files?.[0];
-                setImagePreview(file ? URL.createObjectURL(file) : null);
+            </p>
+            <FileDropTarget
+              ariaLabel={`${imageFile || editing ? '更换' : '上传'}首页海报`}
+              accept={IMAGE_UPLOAD_ACCEPT}
+              onSelect={(file, receivedCount) => {
+                if (receivedCount > 1) toast.info('首页海报只接收一张图片');
+                void selectPosterImage(file);
               }}
-            />
+              className='group mt-2 grid min-h-44 place-items-center overflow-hidden border border-dashed border-white/18 bg-white/[0.025] transition-[border-color,background-color,transform] hover:border-[#d84a3f]/70 focus-visible:border-[#d84a3f] data-[dragging=true]:scale-[0.99] data-[dragging=true]:border-[#d84a3f] data-[dragging=true]:bg-[#d84a3f]/8'
+            >
+              {({ dragging }) =>
+                imagePreparing ? (
+                  <span className='text-center' aria-live='polite'>
+                    <span className='mx-auto block size-5 animate-spin rounded-full border border-white/18 border-t-[#d84a3f]' />
+                    <span className='mt-3 block text-sm text-white/64'>正在本地压缩图片</span>
+                    <span className='mt-1 block text-[10px] text-white/28'>处理完成前不会上传</span>
+                  </span>
+                ) : imagePreview || editing ? (
+                  <span className='relative block h-56 w-full'>
+                    <Image
+                      src={imagePreview ?? editing!.imageUrl}
+                      alt='海报预览'
+                      fill
+                      unoptimized
+                      sizes='560px'
+                      className='object-cover'
+                    />
+                    <span
+                      className={`absolute inset-0 grid place-items-center bg-black/55 text-xs transition-opacity ${
+                        dragging
+                          ? 'opacity-100 text-[#ec7c72]'
+                          : 'opacity-0 group-hover:opacity-100'
+                      }`}
+                    >
+                      {dragging ? '松开鼠标即可上传' : '拖入新图片或点击更换'}
+                    </span>
+                    {imageFile ? (
+                      <span className='absolute right-3 bottom-3 max-w-[calc(100%-1.5rem)] truncate bg-black/70 px-2 py-1 text-[9px] text-white/68'>
+                        {imageResult ?? imageFile.name}
+                      </span>
+                    ) : null}
+                  </span>
+                ) : (
+                  <span className='text-center'>
+                    <Icons.upload
+                      className={`mx-auto ${dragging ? 'text-[#ec7c72]' : 'text-[#d84a3f]'}`}
+                      size={22}
+                    />
+                    <span className='mt-3 block text-sm text-white/64'>
+                      {dragging ? '松开鼠标即可上传' : '拖入海报或点击选择'}
+                    </span>
+                    <span className='mt-1 block text-[10px] text-white/28'>
+                      JPG、PNG、WebP、AVIF，超过 1 MB 将自动压缩
+                    </span>
+                  </span>
+                )
+              }
+            </FileDropTarget>
           </div>
 
           <div>
@@ -461,17 +635,23 @@ export function ShowcaseManager() {
             <button
               type='button'
               onClick={() => setEditorOpen(false)}
-              disabled={saving}
+              disabled={saving || imagePreparing}
               className='h-11 flex-1 border border-white/14 text-sm text-white/62 disabled:opacity-40'
             >
               取消
             </button>
             <button
               type='submit'
-              disabled={saving}
+              disabled={saving || imagePreparing}
               className='h-11 flex-1 bg-[#d84a3f] text-sm font-semibold text-[#130f0f] disabled:cursor-wait disabled:opacity-55'
             >
-              {saving ? '正在保存…' : editing ? '保存修改' : '上传并保存'}
+              {imagePreparing
+                ? '正在压缩图片…'
+                : saving
+                  ? '正在保存…'
+                  : editing
+                    ? '保存修改'
+                    : '上传并保存'}
             </button>
           </div>
         </form>

@@ -10,10 +10,22 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 
-function ScriptCard({ script }: { script: DemoScript }) {
+type CatalogueStatus = 'all' | 'available' | 'sold' | 'purchased' | 'draft';
+type PresentationFilter = '全部形式' | DemoScript['presentationMode'];
+
+function ScriptCard({ script, purchased }: { script: DemoScript; purchased: boolean }) {
   const { role } = useScriptLibraryDemo();
   const isSold = script.status === 'sold';
-  const canOpen = role !== 'guest' && (!isSold || role === 'admin');
+  const canOpen = role !== 'guest' && (!isSold || role === 'admin' || purchased);
+  const actionLabel = isSold
+    ? purchased
+      ? '查看并下载'
+      : role === 'admin'
+        ? '查看成交档案'
+        : '不可查看'
+    : role === 'guest'
+      ? '登录后查看'
+      : '查看详情';
   const card = (
     <article className='group relative'>
       <div className='relative aspect-[3/4.2] overflow-hidden bg-[#191b20]'>
@@ -67,11 +79,17 @@ function ScriptCard({ script }: { script: DemoScript }) {
         <p className='line-clamp-2 min-h-12 text-sm leading-6 text-white/52'>{script.logline}</p>
         <div className='mt-4 flex items-center justify-between border-t border-white/10 pt-3 text-xs'>
           <span className='text-white/42'>
-            {isSold ? '交易已完成' : <HeartPointAmount amount={script.price} />}
+            {isSold ? (
+              purchased ? (
+                '已购买'
+              ) : (
+                '交易已完成'
+              )
+            ) : (
+              <HeartPointAmount amount={script.price} />
+            )}
           </span>
-          <span className={canOpen ? 'text-[#e46b60]' : 'text-white/28'}>
-            {isSold ? '不可查看' : role === 'guest' ? '登录后查看' : '查看详情'}
-          </span>
+          <span className={canOpen ? 'text-[#e46b60]' : 'text-white/28'}>{actionLabel}</span>
         </div>
       </div>
     </article>
@@ -90,29 +108,67 @@ function ScriptCard({ script }: { script: DemoScript }) {
 }
 
 export function LibraryHome() {
-  const { scripts, role, scriptsLoading } = useScriptLibraryDemo();
+  const { scripts, role, scriptsLoading, purchasedIds } = useScriptLibraryDemo();
   const [query, setQuery] = useState('');
   const [genre, setGenre] = useState('全部');
+  const [catalogueStatus, setCatalogueStatus] = useState<CatalogueStatus>('all');
+  const [presentation, setPresentation] = useState<PresentationFilter>('全部形式');
+  const catalogueScripts = useMemo(
+    () => scripts.filter((script) => script.status !== 'draft' || role === 'admin'),
+    [role, scripts]
+  );
   const genres = useMemo(
-    () => ['全部', ...new Set(scripts.map((script) => script.genre))],
-    [scripts]
+    () => ['全部', ...new Set(catalogueScripts.map((script) => script.genre))],
+    [catalogueScripts]
+  );
+  const counts = useMemo(
+    () => ({
+      all: catalogueScripts.length,
+      available: catalogueScripts.filter((script) => script.status === 'available').length,
+      sold: catalogueScripts.filter((script) => script.status === 'sold').length,
+      purchased: catalogueScripts.filter((script) => purchasedIds.includes(script.id)).length,
+      draft: catalogueScripts.filter((script) => script.status === 'draft').length
+    }),
+    [catalogueScripts, purchasedIds]
+  );
+  const statusOptions = useMemo(
+    () => [
+      { value: 'all' as const, label: '全部', count: counts.all },
+      { value: 'available' as const, label: '可购买', count: counts.available },
+      { value: 'sold' as const, label: '已售出', count: counts.sold },
+      ...(role !== 'guest' && counts.purchased
+        ? [{ value: 'purchased' as const, label: '我已购买', count: counts.purchased }]
+        : []),
+      ...(role === 'admin' && counts.draft
+        ? [{ value: 'draft' as const, label: '草稿', count: counts.draft }]
+        : [])
+    ],
+    [counts, role]
   );
 
   const visibleScripts = useMemo(
     () =>
-      scripts.filter((script) => {
-        if (script.status === 'draft' && role !== 'admin') return false;
+      catalogueScripts.filter((script) => {
         const matchesGenre = genre === '全部' || script.genre === genre;
+        const matchesPresentation =
+          presentation === '全部形式' || script.presentationMode === presentation;
+        const matchesStatus =
+          catalogueStatus === 'all' ||
+          (catalogueStatus === 'purchased'
+            ? purchasedIds.includes(script.id)
+            : script.status === catalogueStatus);
         const keyword = query.trim().toLowerCase();
         const matchesQuery =
           !keyword ||
           script.title.toLowerCase().includes(keyword) ||
           script.englishTitle.toLowerCase().includes(keyword) ||
           script.tags.some((tag) => tag.toLowerCase().includes(keyword));
-        return matchesGenre && matchesQuery;
+        return matchesGenre && matchesPresentation && matchesStatus && matchesQuery;
       }),
-    [genre, query, role, scripts]
+    [catalogueScripts, catalogueStatus, genre, presentation, purchasedIds, query]
   );
+  const filtersActive =
+    query.trim() || genre !== '全部' || catalogueStatus !== 'all' || presentation !== '全部形式';
 
   return (
     <main className='min-h-screen bg-[#0d0e11] text-[#f4f0e8]'>
@@ -147,13 +203,13 @@ export function LibraryHome() {
       </section>
 
       <section className='mx-auto max-w-[1480px] px-5 py-14 sm:px-8 lg:px-12 lg:py-20'>
-        <div className='mb-10 flex flex-col gap-6 border-b border-white/10 pb-7 lg:flex-row lg:items-end lg:justify-between'>
-          <div>
-            <p className='text-xs text-white/34'>SCRIPT CATALOGUE / {visibleScripts.length}</p>
-            <h2 className='mt-2 font-serif text-4xl tracking-[-0.035em]'>剧本目录</h2>
-          </div>
-          <div className='flex flex-col gap-4 sm:flex-row sm:items-center'>
-            <div className='relative min-w-60'>
+        <div className='mb-10 border-b border-white/10 pb-7'>
+          <div className='flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between'>
+            <div>
+              <p className='text-xs text-white/34'>SCRIPT CATALOGUE / {visibleScripts.length}</p>
+              <h2 className='mt-2 font-serif text-4xl tracking-[-0.035em]'>剧本目录</h2>
+            </div>
+            <div className='relative w-full lg:w-80'>
               <Icons.search
                 className='absolute top-1/2 left-3 -translate-y-1/2 text-white/35'
                 size={16}
@@ -166,16 +222,70 @@ export function LibraryHome() {
                 className='h-11 w-full border border-white/12 bg-white/[0.03] pr-4 pl-10 text-sm outline-none placeholder:text-white/28 focus:border-[#d84a3f]'
               />
             </div>
-            <select
-              value={genre}
-              onChange={(event) => setGenre(event.target.value)}
-              aria-label='按类型筛选'
-              className='h-11 border border-white/12 bg-[#121318] px-4 text-sm text-white/72 outline-none focus:border-[#d84a3f]'
-            >
-              {genres.map((item) => (
-                <option key={item}>{item}</option>
+          </div>
+
+          <div className='mt-7 flex flex-col gap-5 border-t border-white/[0.07] pt-5 xl:flex-row xl:items-center xl:justify-between'>
+            <div className='flex flex-wrap gap-x-6 gap-y-2' aria-label='按销售状态筛选'>
+              {statusOptions.map((option) => (
+                <button
+                  key={option.value}
+                  type='button'
+                  onClick={() => setCatalogueStatus(option.value)}
+                  aria-pressed={catalogueStatus === option.value}
+                  className={cn(
+                    'relative py-2 text-xs transition-colors after:absolute after:right-0 after:bottom-0 after:left-0 after:h-px after:origin-left after:scale-x-0 after:bg-[#d84a3f] after:transition-transform',
+                    catalogueStatus === option.value
+                      ? 'text-white after:scale-x-100'
+                      : 'text-white/38 hover:text-white/68'
+                  )}
+                >
+                  {option.label}
+                  <span className='ml-2 font-mono text-[9px] text-white/24'>{option.count}</span>
+                </button>
               ))}
-            </select>
+            </div>
+
+            <div className='flex flex-col gap-3 sm:flex-row sm:items-center'>
+              <span className='hidden text-[10px] tracking-[0.16em] text-white/24 uppercase xl:inline'>
+                Filter by
+              </span>
+              <select
+                value={genre}
+                onChange={(event) => setGenre(event.target.value)}
+                aria-label='按题材筛选'
+                className='h-10 min-w-36 border border-white/12 bg-[#121318] px-3 text-xs text-white/64 outline-none focus:border-[#d84a3f]'
+              >
+                {genres.map((item) => (
+                  <option key={item} value={item}>
+                    {item === '全部' ? '全部题材' : item}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={presentation}
+                onChange={(event) => setPresentation(event.target.value as PresentationFilter)}
+                aria-label='按内容形式筛选'
+                className='h-10 min-w-32 border border-white/12 bg-[#121318] px-3 text-xs text-white/64 outline-none focus:border-[#d84a3f]'
+              >
+                <option value='全部形式'>全部形式</option>
+                <option value='解说'>解说</option>
+                <option value='演绎'>演绎</option>
+              </select>
+              {filtersActive ? (
+                <button
+                  type='button'
+                  onClick={() => {
+                    setQuery('');
+                    setGenre('全部');
+                    setCatalogueStatus('all');
+                    setPresentation('全部形式');
+                  }}
+                  className='h-10 px-2 text-xs text-white/34 transition-colors hover:text-[#e46b60]'
+                >
+                  清除筛选
+                </button>
+              ) : null}
+            </div>
           </div>
         </div>
 
@@ -192,7 +302,11 @@ export function LibraryHome() {
         ) : visibleScripts.length ? (
           <div className='grid gap-x-5 gap-y-14 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'>
             {visibleScripts.map((script) => (
-              <ScriptCard key={script.id} script={script} />
+              <ScriptCard
+                key={script.id}
+                script={script}
+                purchased={purchasedIds.includes(script.id)}
+              />
             ))}
           </div>
         ) : (

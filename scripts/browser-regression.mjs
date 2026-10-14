@@ -68,6 +68,13 @@ const card = {
   },
   detailLoaded: false
 };
+const soldCard = {
+  ...card,
+  id: 'audit-sold-script',
+  title: 'Audit Sold Script',
+  englishTitle: 'Audit Sold Script',
+  status: 'sold'
+};
 const fullDetail = () => ({
   ...card,
   synopsis: 'Fixture synopsis',
@@ -112,11 +119,11 @@ try {
       if (failMemberRequests) return json({ success: false }, 503);
       return ok({
         user: { ...users[active], points: active === 'a' ? 1111 : 222 },
-        purchasedScriptIds: active === 'a' ? [card.id] : [],
+        purchasedScriptIds: active === 'a' ? [card.id, soldCard.id] : [],
         ledger: []
       });
     }
-    if (path === '/api/v1/scripts') return ok({ items: [card] });
+    if (path === '/api/v1/scripts') return ok({ items: [card, soldCard] });
     if (path === '/api/v1/admin/scripts') return ok({ items: [fullDetail()] });
     if (path === '/api/v1/scripts/' + card.id) {
       if (failMemberRequests) return json({ success: false }, 503);
@@ -133,6 +140,7 @@ try {
   await expect(page.locator('header')).toContainText('1,111');
   const otherTab = await context.newPage();
   await otherTab.goto(baseUrl + '/scripts');
+  await expect(otherTab.locator(`a[href="/scripts/${soldCard.id}"]`)).toHaveCount(1);
   const notifySessionChange = () =>
     otherTab.evaluate(() => {
       localStorage.setItem(
@@ -147,12 +155,21 @@ try {
   active = 'b';
   failMemberRequests = true;
   await notifySessionChange();
+  // The tab writing localStorage does not receive its own storage event. Reload it to
+  // model the initiating tab completing sign-in as user B while the reader tab receives
+  // the cross-tab session notification above.
+  await otherTab.reload();
   await expect(page.locator('header')).toContainText('222');
   await expect(page.locator('header')).not.toContainText('1,111');
   await expect(page.getByText('PRIVATE_CONTEXT_a', { exact: true })).toHaveCount(0);
   await expect(page.getByRole('link', { name: '下载全部交付物料', exact: true })).toHaveCount(0);
+  await expect(otherTab.getByText('Audit Sold Script', { exact: true })).toBeVisible();
+  await expect(otherTab.locator(`a[href="/scripts/${soldCard.id}"]`)).toHaveCount(0);
+  await otherTab.getByRole('button', { name: /^已售出1$/ }).click();
+  await expect(otherTab.getByText('Audit Sold Script', { exact: true })).toBeVisible();
+  await expect(otherTab.getByText('Audit Script', { exact: true })).toHaveCount(0);
   console.log(
-    'PASS same-role cross-tab account change clears old balance, ownership and reader even when refresh fails'
+    'PASS same-role cross-tab account change clears old balance, ownership and reader while sold catalogue permissions and filtering stay correct'
   );
   failMemberRequests = false;
   active = 'admin';

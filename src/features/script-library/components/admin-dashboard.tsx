@@ -5,6 +5,7 @@ import { XinzhiBrand } from '@/components/xinzhi-brand';
 import type { Icon } from '@/components/icons';
 import type { DemoScript, DemoUser, RechargePlan } from '@/features/script-library/api/types';
 import { DemoModal } from '@/features/script-library/components/demo-modal';
+import { AgentManager } from '@/features/script-library/components/agent-manager';
 import { useScriptLibraryDemo } from '@/features/script-library/components/demo-context';
 import { ScriptUploadFlow } from '@/features/script-library/components/script-upload-flow';
 import { ScriptEditor } from '@/features/script-library/components/script-editor';
@@ -23,6 +24,7 @@ type AdminSection =
   | 'users'
   | 'invites'
   | 'orders'
+  | 'agent'
   | 'recharges';
 
 interface AdminInvite {
@@ -43,6 +45,7 @@ const navItems: { id: AdminSection; label: string; icon: Icon }[] = [
   { id: 'users', label: '用户与心源', icon: Icons.teams },
   { id: 'invites', label: '注册码', icon: Icons.lock },
   { id: 'orders', label: '剧本订单', icon: Icons.billing },
+  { id: 'agent', label: 'Agent管理', icon: Icons.robot },
   { id: 'recharges', label: '支付预留', icon: Icons.creditCard }
 ];
 
@@ -778,6 +781,10 @@ export function AdminDashboard() {
           </div>
         </>
       );
+    }
+
+    if (section === 'agent') {
+      return <AgentManager />;
     }
 
     return (

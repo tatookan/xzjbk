@@ -361,10 +361,8 @@ export function ScriptDetail() {
                 <h2 className='font-serif text-4xl tracking-[-0.045em]'>项目概览</h2>
               </div>
               <div>
-                <p className='max-w-3xl font-serif text-3xl leading-[1.28] tracking-[-0.025em] text-white/88'>
-                  {script.logline}
-                </p>
-                <p className='mt-8 max-w-3xl text-[15px] leading-8 text-white/52'>
+                <h3 className='font-serif text-2xl tracking-[-0.03em] text-white/88'>故事梗概</h3>
+                <p className='mt-5 max-w-3xl break-words whitespace-pre-wrap text-[15px] leading-8 text-white/56 [tab-size:4]'>
                   {script.synopsis}
                 </p>
                 <dl className='mt-10 grid grid-cols-2 border-y border-white/10 sm:grid-cols-4'>
@@ -398,8 +396,7 @@ export function ScriptDetail() {
                 </p>
               </div>
               <div className='p-7 md:p-10 lg:p-12'>
-                <span className='font-serif text-5xl leading-none text-[#d84a3f]'>“</span>
-                <p className='-mt-3 max-w-3xl font-serif text-2xl leading-[1.55] tracking-[-0.02em] sm:text-3xl'>
+                <p className='max-w-3xl break-words whitespace-pre-wrap text-[15px] leading-8 text-white/62 [tab-size:4]'>
                   {script.directorStatement}
                 </p>
                 <div className='mt-10 flex flex-wrap gap-x-6 gap-y-2 border-t border-white/10 pt-5 text-xs text-white/34'>
@@ -439,7 +436,7 @@ export function ScriptDetail() {
                   <h3 className='mt-3 font-serif text-3xl tracking-[-0.035em]'>
                     {activeDirectorSection.title}
                   </h3>
-                  <p className='mt-5 max-w-3xl text-[15px] leading-8 text-white/56'>
+                  <p className='mt-5 max-w-3xl break-words whitespace-pre-wrap text-[15px] leading-8 text-white/56 [tab-size:4]'>
                     {activeDirectorSection.summary}
                   </p>
                 </div>

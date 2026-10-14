@@ -115,7 +115,7 @@ export default function Page() {
 
       <section
         id='works'
-        className='portal-section overflow-hidden bg-[#f0ece3] py-12 text-[#16171a] sm:py-16 lg:py-20'
+        className='portal-section overflow-hidden bg-[#f0ece3] py-8 text-[#16171a] sm:py-10 lg:py-12'
       >
         <WorkReel />
       </section>

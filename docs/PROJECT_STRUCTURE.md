@@ -28,6 +28,8 @@ next-shadcn-dashboard-starter/
 │   ├── styles/               全局视觉样式
 │   └── lib/                  小型通用工具
 ├── drizzle/                  数据库版本和升级记录
+├── packages/                 可供用户下载的官方 Agent Skill 源码
+├── openapi/                  外部 Agent API 的机器可读契约
 ├── public/                   品牌标志、门户固定图片和 PV 视频
 ├── scripts/                  初始化、检查、备份等运维脚本
 ├── docs/                     项目、部署和 LLM Wiki 文档
@@ -60,6 +62,7 @@ src/app/
     ├── scripts/[id]/page.tsx      剧本详情 /scripts/剧本ID
     ├── login/page.tsx             登录注册 /login
     ├── account/page.tsx           个人中心 /account
+    ├── agent/page.tsx             Agent说明与Skill下载 /agent
     ├── terms/page.tsx             用户协议 /terms
     ├── privacy/page.tsx           隐私政策 /privacy
     └── admin/page.tsx             管理后台 /admin
@@ -91,6 +94,7 @@ src/app/
 - `login-screen.tsx`：登录、白名单注册和协议同意。
 - `account-screen.tsx`：心源余额、已购剧本、整包下载、流水、充值占位和密码修改。
 - `admin-dashboard.tsx`：管理员后台总界面。
+- `agent-manager.tsx`：Agent灰度授权、Key、导入记录和待审核草稿。
 - `script-upload-flow.tsx`：上传新剧本。
 - `script-editor.tsx`：编辑剧本资料和白名单试读。
 - `showcase-manager.tsx`：管理门户滚动海报。
@@ -147,6 +151,9 @@ PostgreSQL / 私有文件目录
 /api/v1/admin/invite-codes          注册码管理
 /api/v1/admin/orders                订单查询
 /api/v1/admin/showcase-posters      门户海报管理
+/api/v1/admin/agent                 Agent灰度资格、Key和导入记录
+/api/agent/v1/skill/version         官方Skill版本与更新地址
+/api/agent/v1/imports               外部Agent受限提交草稿
 /api/v1/health                      服务存活检查
 /api/v1/readiness                   数据库和存储就绪检查
 ```
@@ -190,6 +197,10 @@ API 路由只负责四件事：
 
 负责门户滚动海报的上传、编辑、排序、上下架、删除和跳转配置。
 
+#### `agent-access` 与 `agent-import`
+
+`agent-access`负责灰度资格、用户绑定Key、版本校验、数据库限流和使用记录；`agent-import`负责幂等导入任务及其审计状态。外部Agent只能创建价格为0的草稿，不能发布或调用网页管理接口。
+
 ## 数据库和文件
 
 ### `src/infrastructure/database`
@@ -202,6 +213,7 @@ API 路由只负责四件事：
 - `assets.ts`：图片和原文件记录。
 - `showcase.ts`：门户海报。
 - `audit.ts`：敏感操作审计记录。
+- `agent.ts`：Agent灰度资格、Key摘要、限流桶和导入任务。
 - `index.ts`：统一导出所有表。
 
 ### `drizzle`
@@ -255,6 +267,13 @@ API 路由只负责四件事：
 - `backup-verify.sh`：验证备份完整性。
 - `audit-regression.ts`：独立数据库中的业务、权限、并发、自检和备份恢复回归。
 - `browser-regression.mjs`：独立浏览器与合成响应中的账户切换、缓存隔离回归。
+- `package-agent-skill.mjs`：把官方Skill源码生成可下载ZIP，生产构建前自动执行。
+
+### `packages` 与 `openapi`
+
+`packages/xinzhi-script-uploader/` 是官方剧本入库Skill源码。`SKILL.md`是执行入口；`references/`冻结API、内容和工作目录规范；`scripts/xinzhi_workspace.py`负责离线确定性校验与标准发布包，`scripts/xinzhi_agent.py`负责外部凭证、版本更新和受限上传；`tests/`覆盖成功与阻断场景，但不会打进用户下载包。Skill首次运行引导用户在终端配置Key，凭证保存在操作系统用户配置目录，不能进入Skill包。每次导入前检查服务器版本，用户确认后才能运行官方更新程序。
+
+`openapi/agent-v1.yaml` 是Agent接口的机器可读契约；不可突破的权限与安全规则记录在 `docs/agent/API_CONSTITUTION.md`。工作目录标准冻结前，另一台生产电脑的只读勘察任务记录在 `docs/agent/WORKSPACE_STANDARD_DISCOVERY.md`。接口变化时三处必须同步更新。
 
 ### `docs`
 

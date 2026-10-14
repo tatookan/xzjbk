@@ -3,9 +3,13 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "agent:package": "node scripts/package-agent-skill.mjs",
+    "agent:test": "python3 -m unittest discover -s packages/xinzhi-script-uploader/tests -v",
+    "agent:test:server": "tsx scripts/agent-validation-regression.ts",
     "test:audit": "tsx scripts/audit-regression.ts",
     "test:browser": "node scripts/browser-regression.mjs",
     "dev": "next dev",
+    "prebuild": "npm run agent:package",
     "build": "next build",
     "start": "next start",
     "db:generate": "drizzle-kit generate",

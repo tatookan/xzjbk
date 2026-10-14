@@ -1,4 +1,5 @@
 export * from './assets';
+export * from './agent';
 export * from './audit';
 export * from './commerce';
 export * from './identity';

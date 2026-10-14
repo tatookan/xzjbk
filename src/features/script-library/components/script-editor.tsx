@@ -4,11 +4,15 @@ import { Icons } from '@/components/icons';
 import type { DemoScript, ScriptStatus } from '@/features/script-library/api/types';
 import { DemoModal } from '@/features/script-library/components/demo-modal';
 import { useScriptLibraryDemo } from '@/features/script-library/components/demo-context';
+import { FileDropTarget } from '@/features/script-library/components/file-drop-target';
+import { formatUploadBytes, IMAGE_UPLOAD_ACCEPT, prepareImageForUpload } from '@/lib/image-upload';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
 import Link from 'next/link';
-import { FormEvent, useState } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
 import { toast } from 'sonner';
+
+const SCRIPT_COVER_MAX_BYTES = 12 * 1024 * 1024;
 
 function getFiles(script: DemoScript) {
   return [
@@ -47,8 +51,45 @@ export function ScriptEditor({ script, onClose }: { script: DemoScript; onClose:
     )
   );
   const [cover, setCover] = useState<File | undefined>();
+  const [coverPreview, setCoverPreview] = useState<string | null>(null);
+  const [coverPreparing, setCoverPreparing] = useState(false);
+  const [coverResult, setCoverResult] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const files = getFiles(script);
+
+  useEffect(() => {
+    return () => {
+      if (coverPreview) URL.revokeObjectURL(coverPreview);
+    };
+  }, [coverPreview]);
+
+  const selectCover = async (file: File) => {
+    setCoverPreparing(true);
+    setCoverResult(null);
+    try {
+      const prepared = await prepareImageForUpload(file, {
+        assetLabel: '剧本封面',
+        maxBytes: SCRIPT_COVER_MAX_BYTES,
+        maxSizeLabel: '12 MB',
+        maxWidth: 1600,
+        maxHeight: 2400
+      });
+      setCover(prepared.file);
+      setCoverPreview(URL.createObjectURL(prepared.file));
+      if (prepared.compressed) {
+        const result = `${formatUploadBytes(prepared.originalBytes)} → ${formatUploadBytes(prepared.outputBytes)}`;
+        setCoverResult(`已自动压缩 · ${result}`);
+        toast.success(`封面已自动压缩：${result}`);
+      } else {
+        setCoverResult(`图片已符合要求 · ${formatUploadBytes(prepared.outputBytes)}`);
+        toast.info(`${file.name} 已选择，保存后生效`);
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : '剧本封面处理失败');
+    } finally {
+      setCoverPreparing(false);
+    }
+  };
 
   const updatePreviewRow = (id: string, field: 'zh' | 'en', value: string) => {
     setPreviewRows((rows) => rows.map((row) => (row.id === id ? { ...row, [field]: value } : row)));
@@ -118,6 +159,10 @@ export function ScriptEditor({ script, onClose }: { script: DemoScript; onClose:
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (coverPreparing) {
+      toast.info('请等待封面压缩完成');
+      return;
+    }
     const preview = previewRows.map(({ zh, en }) => ({ zh: zh.trim(), en: en.trim() }));
     if (preview.some((line) => !line.zh || !line.en)) {
       toast.error('每个试读单元都需要填写中文和英文内容');
@@ -300,35 +345,63 @@ export function ScriptEditor({ script, onClose }: { script: DemoScript; onClose:
           </div>
 
           <aside>
-            <div className='grid grid-cols-[88px_1fr] gap-4 border border-white/10 p-3'>
-              <div className='relative aspect-[2/3] overflow-hidden'>
-                <Image
-                  src={script.image}
-                  alt={`${script.title}封面`}
-                  fill
-                  className='object-cover'
-                  sizes='88px'
-                />
-              </div>
-              <div className='min-w-0 py-1'>
-                <p className='text-xs font-medium'>交付文件已保存</p>
-                <p className='mt-2 truncate text-[10px] text-white/30'>{script.format}</p>
-                <p className='mt-1 text-[10px] text-white/30'>{files.length} 份交付文件</p>
-                <label className='mt-4 inline-flex cursor-pointer items-center gap-2 text-[10px] text-[#d9685e]'>
-                  <Icons.upload size={13} /> 更换封面
-                  <input
-                    type='file'
-                    accept='image/jpeg,image/png,image/webp'
-                    className='sr-only'
-                    onChange={(event) => {
-                      const file = event.target.files?.[0];
-                      setCover(file);
-                      if (file) toast.info(`${file.name} 已选择，保存后生效`);
-                    }}
-                  />
-                </label>
-              </div>
-            </div>
+            <FileDropTarget
+              ariaLabel='更换剧本封面'
+              accept={IMAGE_UPLOAD_ACCEPT}
+              onSelect={(file, receivedCount) => {
+                if (receivedCount > 1) toast.info('剧本封面只接收一张图片');
+                void selectCover(file);
+              }}
+              className='border border-white/10 p-3 transition-[border-color,background-color,transform] focus-visible:border-[#d84a3f] data-[dragging=true]:scale-[0.985] data-[dragging=true]:border-[#d84a3f] data-[dragging=true]:bg-[#d84a3f]/8'
+            >
+              {({ dragging }) => (
+                <div className='grid grid-cols-[88px_1fr] gap-4'>
+                  <div className='relative aspect-[2/3] overflow-hidden bg-white/[0.03]'>
+                    {coverPreparing ? (
+                      <span className='grid h-full place-items-center' aria-label='正在压缩封面'>
+                        <span className='size-4 animate-spin rounded-full border border-white/18 border-t-[#d84a3f]' />
+                      </span>
+                    ) : (
+                      <Image
+                        src={coverPreview ?? script.image}
+                        alt={`${script.title}封面预览`}
+                        fill
+                        className='object-cover'
+                        sizes='88px'
+                      />
+                    )}
+                    {dragging ? (
+                      <span className='absolute inset-0 grid place-items-center bg-[#0c0d10]/78 text-[10px] text-[#ec7c72]'>
+                        松开上传
+                      </span>
+                    ) : null}
+                  </div>
+                  <div className='min-w-0 py-1'>
+                    <p className='flex items-center justify-between gap-3 text-xs font-medium'>
+                      更换剧本封面
+                      <Icons.upload
+                        size={13}
+                        className={dragging ? 'text-[#d84a3f]' : 'text-white/24'}
+                      />
+                    </p>
+                    <p className='mt-2 truncate text-[10px] text-white/34'>
+                      {coverPreparing
+                        ? '正在本地压缩…'
+                        : (coverResult ?? cover?.name ?? script.format)}
+                    </p>
+                    <p className='mt-1 text-[10px] text-white/30'>{files.length} 份交付文件</p>
+                    <p className='mt-4 text-[10px] text-[#d9685e]'>
+                      {dragging
+                        ? '松开鼠标即可上传'
+                        : cover
+                          ? '拖入新图片或点击替换'
+                          : '拖入图片或点击选择'}
+                    </p>
+                    <p className='mt-1 text-[9px] text-white/24'>超过 12 MB 将自动压缩</p>
+                  </div>
+                </div>
+              )}
+            </FileDropTarget>
 
             <div className='mt-4 border border-white/10 p-5'>
               <div className='flex items-end justify-between'>
@@ -493,10 +566,10 @@ export function ScriptEditor({ script, onClose }: { script: DemoScript; onClose:
             </button>
             <button
               type='submit'
-              disabled={saving}
+              disabled={saving || coverPreparing}
               className='h-11 bg-[#d84a3f] px-6 text-sm font-semibold text-[#130f0f] transition-colors hover:bg-[#df5b51] active:translate-y-px disabled:cursor-wait disabled:opacity-55'
             >
-              {saving ? '正在保存…' : '保存并同步前台'}
+              {coverPreparing ? '正在压缩封面…' : saving ? '正在保存…' : '保存并同步前台'}
             </button>
           </div>
         </div>

@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import type { ShowcasePosterInput } from './contracts';
+import { MAX_SHOWCASE_REEL_SPEED, MIN_SHOWCASE_REEL_SPEED } from './contracts';
 
 const optionalText = (max: number) =>
   z
@@ -69,4 +70,8 @@ export function readPosterInput(formData: FormData): ShowcasePosterInput {
 
 export const reorderPostersSchema = z.object({
   orderedIds: z.array(z.string().uuid()).max(100)
+});
+
+export const showcaseSettingsInputSchema = z.object({
+  reelSpeedPxPerSecond: z.number().int().min(MIN_SHOWCASE_REEL_SPEED).max(MAX_SHOWCASE_REEL_SPEED)
 });

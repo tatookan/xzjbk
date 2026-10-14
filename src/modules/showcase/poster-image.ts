@@ -5,7 +5,7 @@ import type { StoredObject } from '@/infrastructure/storage';
 import { getServerEnv } from '@/shared/config/server-env';
 import { AppError } from '@/shared/api/errors';
 
-const POSTER_MAX_BYTES = 12 * 1024 * 1024;
+const POSTER_MAX_BYTES = 1 * 1024 * 1024;
 const POSTER_MAX_PIXELS = 40_000_000;
 
 export interface PreparedPosterImage {
@@ -29,7 +29,7 @@ export function readPosterFile(formData: FormData, required: boolean): File | nu
 export async function preparePosterImage(file: File): Promise<PreparedPosterImage> {
   const uploadLimit = Math.min(getServerEnv().MAX_UPLOAD_BYTES, POSTER_MAX_BYTES);
   if (file.size > uploadLimit) {
-    throw new AppError('VALIDATION_ERROR', '海报图片不能超过 12 MB', 422);
+    throw new AppError('VALIDATION_ERROR', '海报图片不能超过 1 MB，请压缩后再上传', 422);
   }
 
   const input = Buffer.from(await file.arrayBuffer());

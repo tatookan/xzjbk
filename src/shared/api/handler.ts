@@ -37,6 +37,16 @@ export async function withApiHandler<T>(
     });
   } catch (error) {
     if (error instanceof AppError) {
+      const responseHeaders: Record<string, string> = { 'x-request-id': requestId };
+      if (
+        error.status === 429 &&
+        typeof error.details === 'object' &&
+        error.details !== null &&
+        'retryAfterSeconds' in error.details &&
+        typeof error.details.retryAfterSeconds === 'number'
+      ) {
+        responseHeaders['Retry-After'] = String(error.details.retryAfterSeconds);
+      }
       return NextResponse.json(
         {
           success: false,
@@ -47,7 +57,7 @@ export async function withApiHandler<T>(
           },
           meta: createMeta(requestId)
         },
-        { status: error.status, headers: { 'x-request-id': requestId } }
+        { status: error.status, headers: responseHeaders }
       );
     }
 

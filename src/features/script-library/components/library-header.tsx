@@ -13,7 +13,8 @@ import { useEffect, useRef, useState } from 'react';
 
 const links = [
   { href: '/scripts', label: '剧本库' },
-  { href: '/account', label: '我的剧本' }
+  { href: '/account', label: '我的剧本' },
+  { href: '/agent', label: 'Agent' }
 ];
 
 export function LibraryHeader() {

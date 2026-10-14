@@ -4,6 +4,8 @@ import { Icons } from '@/components/icons';
 import type { ScriptPreviewLine } from '@/features/script-library/api/types';
 import { useScriptLibraryDemo } from '@/features/script-library/components/demo-context';
 import { DemoModal } from '@/features/script-library/components/demo-modal';
+import { FileDropTarget } from '@/features/script-library/components/file-drop-target';
+import { formatUploadBytes, IMAGE_UPLOAD_ACCEPT, prepareImageForUpload } from '@/lib/image-upload';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
 import { FormEvent, useEffect, useState } from 'react';
@@ -24,6 +26,18 @@ const emptyPreviewRow = (id: string): PreviewRow => ({
   zh: '',
   en: ''
 });
+const SCRIPT_COVER_MAX_BYTES = 12 * 1024 * 1024;
+const acceptedDocumentExtensions = new Set(['doc', 'docx', 'txt', 'md']);
+
+function getFileExtension(file: File) {
+  return file.name.split('.').pop()?.toLowerCase() ?? '';
+}
+
+function formatFileSize(bytes: number) {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${Math.ceil(bytes / 1024)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
 
 const formatDefinitions = {
   bilingual: {
@@ -148,6 +162,8 @@ export function ScriptUploadFlow({ open, onClose }: { open: boolean; onClose: ()
   const [files, setFiles] = useState<Record<FileKey, File | null>>(emptyFiles);
   const [cover, setCover] = useState<File | null>(null);
   const [coverPreview, setCoverPreview] = useState<string | null>(null);
+  const [coverPreparing, setCoverPreparing] = useState(false);
+  const [coverResult, setCoverResult] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [previewRows, setPreviewRows] = useState<PreviewRow[]>([
     emptyPreviewRow('preview-initial')
@@ -167,6 +183,7 @@ export function ScriptUploadFlow({ open, onClose }: { open: boolean; onClose: ()
     setFiles({ ...emptyFiles });
     setCover(null);
     setCoverPreview(null);
+    setCoverResult(null);
     setPreviewRows([emptyPreviewRow('preview-reset')]);
     onClose();
   };
@@ -183,6 +200,7 @@ export function ScriptUploadFlow({ open, onClose }: { open: boolean; onClose: ()
     setFiles({ ...emptyFiles });
     setCover(null);
     setCoverPreview(null);
+    setCoverResult(null);
     setPreviewRows([emptyPreviewRow(`preview-${nextMode}`)]);
   };
 
@@ -190,8 +208,51 @@ export function ScriptUploadFlow({ open, onClose }: { open: boolean; onClose: ()
     setPreviewRows((rows) => rows.map((row) => (row.id === id ? { ...row, [field]: value } : row)));
   };
 
+  const selectDocument = (key: FileKey, file: File) => {
+    if (!file.size) {
+      toast.error(`${file.name || '所选文件'}内容为空，请重新选择`);
+      return;
+    }
+    if (!acceptedDocumentExtensions.has(getFileExtension(file))) {
+      toast.error('剧本文件仅支持 Word、TXT 或 Markdown');
+      return;
+    }
+    setFiles((current) => ({ ...current, [key]: file }));
+  };
+
+  const selectCover = async (file: File) => {
+    setCoverPreparing(true);
+    setCoverResult(null);
+    try {
+      const prepared = await prepareImageForUpload(file, {
+        assetLabel: '剧本封面',
+        maxBytes: SCRIPT_COVER_MAX_BYTES,
+        maxSizeLabel: '12 MB',
+        maxWidth: 1600,
+        maxHeight: 2400
+      });
+      setCover(prepared.file);
+      setCoverPreview(URL.createObjectURL(prepared.file));
+      if (prepared.compressed) {
+        const result = `${formatUploadBytes(prepared.originalBytes)} → ${formatUploadBytes(prepared.outputBytes)}`;
+        setCoverResult(`已自动压缩 · ${result}`);
+        toast.success(`封面已自动压缩：${result}`);
+      } else {
+        setCoverResult(`图片已符合要求 · ${formatUploadBytes(prepared.outputBytes)}`);
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : '剧本封面处理失败');
+    } finally {
+      setCoverPreparing(false);
+    }
+  };
+
   const handlePublish = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (coverPreparing) {
+      toast.info('请等待封面压缩完成');
+      return;
+    }
     const completedPreview = previewRows
       .map(({ zh, en }) => ({ zh: zh.trim(), en: en.trim() }))
       .filter((row) => row.zh && row.en);
@@ -298,42 +359,14 @@ export function ScriptUploadFlow({ open, onClose }: { open: boolean; onClose: ()
 
           <div className='grid gap-3 md:grid-cols-3'>
             {definition.slots.map((slot, index) => (
-              <label
+              <ScriptDocumentDropzone
                 key={slot.key}
-                className={cn(
-                  'min-h-48 cursor-pointer border p-5 transition-colors',
-                  files[slot.key]
-                    ? 'border-[#d84a3f] bg-[#d84a3f]/5'
-                    : 'border-dashed border-white/14 hover:border-white/30'
-                )}
-              >
-                <span className='flex items-center justify-between'>
-                  <span className='font-mono text-xs text-[#d84a3f]'>0{index + 1}</span>
-                  {files[slot.key] ? (
-                    <Icons.circleCheck className='text-[#d84a3f]' size={17} />
-                  ) : (
-                    <Icons.upload className='text-white/30' size={17} />
-                  )}
-                </span>
-                <strong className='mt-7 block text-sm font-medium'>{slot.label}</strong>
-                <span className='mt-2 block text-xs leading-5 text-white/34'>
-                  {slot.description}
-                </span>
-                <span className='mt-5 block truncate text-[10px] text-white/46'>
-                  {files[slot.key]?.name || '选择 Word、TXT 或 Markdown'}
-                </span>
-                <input
-                  type='file'
-                  accept='.doc,.docx,.txt,.md'
-                  className='sr-only'
-                  onChange={(event) =>
-                    setFiles((current) => ({
-                      ...current,
-                      [slot.key]: event.target.files?.[0] ?? null
-                    }))
-                  }
-                />
-              </label>
+                index={index}
+                label={slot.label}
+                description={slot.description}
+                file={files[slot.key]}
+                onSelect={(file) => selectDocument(slot.key, file)}
+              />
             ))}
           </div>
 
@@ -493,47 +526,74 @@ export function ScriptUploadFlow({ open, onClose }: { open: boolean; onClose: ()
             </div>
 
             <aside>
-              <div className='border border-white/10 p-4'>
-                <p className='text-sm font-medium'>剧本封面</p>
-                <div className='mt-4 grid grid-cols-[92px_1fr] gap-4'>
-                  <div className='relative aspect-[2/3] overflow-hidden bg-white/[0.03]'>
-                    {coverPreview ? (
-                      <Image
-                        src={coverPreview}
-                        alt='剧本封面预览'
-                        fill
-                        className='object-cover'
-                        sizes='92px'
+              <FileDropTarget
+                ariaLabel={`${cover ? '替换' : '上传'}剧本封面`}
+                accept={IMAGE_UPLOAD_ACCEPT}
+                onSelect={(file, receivedCount) => {
+                  if (receivedCount > 1) toast.info('剧本封面只接收一张图片');
+                  void selectCover(file);
+                }}
+                className='border border-white/10 p-4 transition-[border-color,background-color,transform] focus-visible:border-[#d84a3f] data-[dragging=true]:scale-[0.985] data-[dragging=true]:border-[#d84a3f] data-[dragging=true]:bg-[#d84a3f]/8'
+              >
+                {({ dragging }) => (
+                  <>
+                    <p className='flex items-center justify-between text-sm font-medium'>
+                      剧本封面
+                      <Icons.upload
+                        size={15}
+                        className={dragging ? 'text-[#d84a3f]' : 'text-white/24'}
                       />
-                    ) : (
-                      <span className='grid h-full place-items-center text-white/20'>
-                        <Icons.media size={22} />
-                      </span>
-                    )}
-                  </div>
-                  <div className='min-w-0 py-1'>
-                    <p className='truncate text-xs text-white/52'>
-                      {cover?.name || '尚未选择封面'}
                     </p>
-                    <p className='mt-2 text-[10px] leading-5 text-white/28'>
-                      建议竖版 2:3，JPG 或 PNG
-                    </p>
-                    <label className='mt-4 inline-flex cursor-pointer items-center gap-2 text-[10px] text-[#d9685e] hover:text-[#ec7c72]'>
-                      <Icons.upload size={13} /> {cover ? '更换封面' : '上传封面'}
-                      <input
-                        type='file'
-                        accept='image/jpeg,image/png,image/webp'
-                        className='sr-only'
-                        onChange={(event) => {
-                          const nextCover = event.target.files?.[0] ?? null;
-                          setCover(nextCover);
-                          setCoverPreview(nextCover ? URL.createObjectURL(nextCover) : null);
-                        }}
-                      />
-                    </label>
-                  </div>
-                </div>
-              </div>
+                    <div className='mt-4 grid grid-cols-[92px_1fr] gap-4'>
+                      <div className='relative aspect-[2/3] overflow-hidden bg-white/[0.03]'>
+                        {coverPreparing ? (
+                          <span
+                            className='grid h-full place-items-center'
+                            aria-label='正在压缩封面'
+                          >
+                            <span className='size-4 animate-spin rounded-full border border-white/18 border-t-[#d84a3f]' />
+                          </span>
+                        ) : coverPreview ? (
+                          <Image
+                            src={coverPreview}
+                            alt='剧本封面预览'
+                            fill
+                            className='object-cover'
+                            sizes='92px'
+                          />
+                        ) : (
+                          <span className='grid h-full place-items-center text-white/20'>
+                            <Icons.media size={22} />
+                          </span>
+                        )}
+                        {dragging ? (
+                          <span className='absolute inset-0 grid place-items-center bg-[#0c0d10]/78 text-[10px] text-[#ec7c72]'>
+                            松开上传
+                          </span>
+                        ) : null}
+                      </div>
+                      <div className='min-w-0 py-1'>
+                        <p className='truncate text-xs text-white/52'>
+                          {coverPreparing
+                            ? '正在本地压缩…'
+                            : (coverResult ?? cover?.name ?? '尚未选择封面')}
+                        </p>
+                        <p className='mt-2 text-[10px] leading-5 text-white/28'>
+                          建议竖版 2:3，超过 12 MB 将自动压缩
+                        </p>
+                        <p className='mt-4 text-[10px] text-[#d9685e]'>
+                          {dragging
+                            ? '松开鼠标即可上传'
+                            : cover
+                              ? '拖入新图片或点击替换'
+                              : '拖入图片或点击选择'}
+                        </p>
+                        <p className='mt-1 text-[9px] text-white/24'>JPG、PNG、WebP、AVIF</p>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </FileDropTarget>
 
               <div className='mt-4 border border-white/10 p-5'>
                 <p className='text-sm font-medium'>已上传文件</p>
@@ -647,16 +707,80 @@ export function ScriptUploadFlow({ open, onClose }: { open: boolean; onClose: ()
               </button>
               <button
                 type='submit'
-                disabled={saving}
+                disabled={saving || coverPreparing}
                 className='h-11 bg-[#d84a3f] px-6 text-sm font-semibold text-[#130f0f] disabled:cursor-wait disabled:opacity-55'
               >
-                {saving ? '正在安全保存…' : '保存草稿并预览'}
+                {coverPreparing ? '正在压缩封面…' : saving ? '正在安全保存…' : '保存草稿并预览'}
               </button>
             </div>
           </div>
         </form>
       )}
     </DemoModal>
+  );
+}
+
+function ScriptDocumentDropzone({
+  index,
+  label,
+  description,
+  file,
+  onSelect
+}: {
+  index: number;
+  label: string;
+  description: string;
+  file: File | null;
+  onSelect: (file: File) => void;
+}) {
+  return (
+    <FileDropTarget
+      ariaLabel={`${file ? '替换' : '上传'}${label}`}
+      accept='.doc,.docx,.txt,.md'
+      onSelect={(nextFile, receivedCount) => {
+        if (receivedCount > 1) {
+          toast.info('每个位置只保存一份文件，已选择拖入的第一份');
+        }
+        onSelect(nextFile);
+      }}
+      className={cn(
+        'group min-h-48 border p-5 transition-[border-color,background-color,transform]',
+        'focus-visible:border-[#d84a3f]',
+        file
+          ? 'border-[#d84a3f] bg-[#d84a3f]/5 hover:bg-[#d84a3f]/8'
+          : 'border-dashed border-white/14 hover:border-white/30 hover:bg-white/[0.02]',
+        'data-[dragging=true]:scale-[0.985] data-[dragging=true]:border-[#d84a3f] data-[dragging=true]:bg-[#d84a3f]/10'
+      )}
+    >
+      {({ dragging }) => (
+        <>
+          <span className='flex items-center justify-between'>
+            <span className='font-mono text-xs text-[#d84a3f]'>0{index + 1}</span>
+            {file ? (
+              <Icons.circleCheck className='text-[#d84a3f]' size={17} />
+            ) : (
+              <Icons.upload
+                className={cn('text-white/30 transition-colors', dragging && 'text-[#d84a3f]')}
+                size={17}
+              />
+            )}
+          </span>
+          <strong className='mt-7 block text-sm font-medium'>{label}</strong>
+          <span className='mt-2 block text-xs leading-5 text-white/34'>{description}</span>
+          <span
+            className={cn(
+              'mt-5 block text-[10px]',
+              dragging ? 'text-[#df6a60]' : file ? 'text-white/58' : 'text-white/46'
+            )}
+          >
+            {dragging ? '松开鼠标即可上传' : file ? '拖入新文件或点击替换' : '拖入文件或点击选择'}
+          </span>
+          <span className='mt-1 block truncate text-[10px] text-white/28'>
+            {file ? `${file.name} · ${formatFileSize(file.size)}` : '支持 DOC、DOCX、TXT、MD'}
+          </span>
+        </>
+      )}
+    </FileDropTarget>
   );
 }
 

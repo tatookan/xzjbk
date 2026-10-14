@@ -80,6 +80,8 @@ async function main() {
     const assetsRoute = await import('../src/app/api/v1/assets/[id]/route');
     const adminRoute = await import('../src/app/api/v1/admin/scripts/[id]/route');
     const pointsRoute = await import('../src/app/api/v1/admin/users/[id]/points/route');
+    const agentAccess = await import('../src/modules/agent-access/service');
+    const agentImportRoute = await import('../src/app/api/agent/v1/imports/route');
     const password = randomUUID();
     const passwordHash = await hashPassword(password);
     const identities = {
@@ -357,6 +359,103 @@ async function main() {
       const [consent] =
         await query`select count(*)::int as count from users where terms_accepted_at is not null and privacy_accepted_at is not null`;
       assert.equal(consent.count, 1);
+    });
+    await check('Agent Key stays user-bound and can only create an idempotent draft', async () => {
+      await agentAccess.setAgentAccess(identities.a, true, identities.admin);
+      const issued = await agentAccess.createAgentApiKey({
+        ownerUserId: identities.a,
+        actorUserId: identities.admin,
+        name: 'Audit Agent',
+        expiresInDays: 30
+      });
+      const createAgentForm = async () => {
+        const form = new FormData();
+        const agentInput = {
+          ...input,
+          title: 'Agent Draft',
+          genre: 'BL',
+          tags: ['ABO', '契约关系'],
+          directorStatement:
+            '制作执行强调情绪节奏表演镜头色彩空间道具连续性避免误读现场调度声音设计人物关系'.repeat(14),
+          previewRationale:
+            '试读建立主角、关系和世界观，以契约形成冲突钩子，并避开成人内容与结局反转。',
+          previewUnitLabel: '段' as const,
+          status: 'available' as const
+        };
+        for (const [key, value] of Object.entries(agentInput)) {
+          if (key === 'price' || key === 'status') continue;
+          form.set(
+            key,
+            typeof value === 'object' ? JSON.stringify(value) : String(value)
+          );
+        }
+        const cover = await sharp({
+          create: { width: 2, height: 3, channels: 3, background: '#eeeeee' }
+        })
+          .png()
+          .toBuffer();
+        form.set('cover', new File([Uint8Array.from(cover)], 'agent-cover.png', { type: 'image/png' }));
+        for (const field of ['english', 'secondary', 'director']) {
+          form.set(
+            field,
+            new File([`AGENT_DELIVERY_${field}`], `agent-${field}.md`, {
+              type: 'text/markdown'
+            })
+          );
+        }
+        return form;
+      };
+      const agentRequest = async (key: string, version: string, idempotencyKey: string) =>
+        new Request('http://audit.test/api/agent/v1/imports', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${key}`,
+            'X-Xinzhi-Skill-Version': version,
+            'Idempotency-Key': idempotencyKey
+          },
+          body: await createAgentForm()
+        });
+      assert.equal(
+        (await agentImportRoute.POST(await agentRequest('', '1.1.0', randomUUID()))).status,
+        401
+      );
+      assert.equal(
+        (
+          await agentImportRoute.POST(
+            await agentRequest(issued.secret, '1.0.0', randomUUID())
+          )
+        ).status,
+        426
+      );
+      const idempotencyKey = randomUUID();
+      const created = await agentImportRoute.POST(
+        await agentRequest(issued.secret, '1.1.0', idempotencyKey)
+      );
+      assert.equal(created.status, 201);
+      const createdPayload = await created.json();
+      const scriptId = createdPayload.data.scriptId;
+      const [draft] = await query`select status, price_points, created_by_user_id from scripts where id=${scriptId}`;
+      assert.deepEqual(draft, {
+        status: 'draft',
+        price_points: 0,
+        created_by_user_id: identities.a
+      });
+      const repeated = await agentImportRoute.POST(
+        await agentRequest(issued.secret, '1.1.0', idempotencyKey)
+      );
+      assert.equal(repeated.status, 200);
+      assert.equal((await repeated.json()).data.scriptId, scriptId);
+      const [count] = await query`select count(*)::int as count from scripts where title='Agent Draft'`;
+      assert.equal(count.count, 1);
+      await agentAccess.setAgentAccess(identities.a, false, identities.admin);
+      assert.equal(
+        (
+          await agentImportRoute.POST(
+            await agentRequest(issued.secret, '1.1.0', randomUUID())
+          )
+        ).status,
+        401
+      );
     });
     const preflightEnv: NodeJS.ProcessEnv = {
       ...process.env,

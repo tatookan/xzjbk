@@ -1,5 +1,6 @@
 import {
   boolean,
+  check,
   index,
   integer,
   pgEnum,
@@ -8,6 +9,7 @@ import {
   timestamp,
   uuid
 } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
 
 import { mediaAssets } from './assets';
 import { scripts } from './scripts';
@@ -36,4 +38,19 @@ export const showcasePosters = pgTable(
     deletedAt: timestamp('deleted_at', { withTimezone: true })
   },
   (table) => [index('showcase_posters_published_order_idx').on(table.published, table.sortOrder)]
+);
+
+export const showcaseSettings = pgTable(
+  'showcase_settings',
+  {
+    id: text('id').primaryKey().default('portal'),
+    reelSpeedPxPerSecond: integer('reel_speed_px_per_second').notNull().default(30),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [
+    check(
+      'showcase_settings_reel_speed_check',
+      sql`${table.reelSpeedPxPerSecond} between 15 and 60`
+    )
+  ]
 );

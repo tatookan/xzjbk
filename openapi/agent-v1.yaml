@@ -1,0 +1,239 @@
+openapi: 3.1.0
+info:
+  title: Xinzhi Script Library Agent API
+  version: 1.1.0
+  description: External Agent API for creating administrator-reviewable script drafts.
+servers:
+  - url: https://drama.xinsee.cc:8443/api/agent/v1
+paths:
+  /skill/version:
+    get:
+      operationId: getSkillVersion
+      summary: Read the required official Skill version and update package information.
+      responses:
+        "200":
+          description: Current version manifest.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VersionResponse"
+  /imports:
+    post:
+      operationId: createScriptDraft
+      summary: Upload one complete script package and create a draft.
+      security:
+        - agentKey: []
+      parameters:
+        - name: X-Xinzhi-Skill-Version
+          in: header
+          required: true
+          schema:
+            type: string
+            const: 1.1.0
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema:
+            type: string
+            minLength: 8
+            maxLength: 100
+            pattern: "^[a-zA-Z0-9._:-]+$"
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: "#/components/schemas/ScriptImport"
+      responses:
+        "201":
+          description: Draft created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ImportResponse"
+        "200":
+          description: An already committed idempotent request.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ImportResponse"
+        "401":
+          description: Key missing, invalid, expired, revoked, or no longer granted.
+        "409":
+          description: Idempotency or import-state conflict.
+        "422":
+          description: Metadata or files failed validation.
+        "426":
+          description: Skill version does not match the server requirement.
+        "429":
+          description: Per-Key import rate limit exceeded.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+components:
+  securitySchemes:
+    agentKey:
+      type: http
+      scheme: bearer
+      bearerFormat: xz_agent
+  schemas:
+    ApiMeta:
+      type: object
+      required: [requestId, timestamp]
+      properties:
+        requestId:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+    VersionResponse:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          type: object
+          required:
+            [apiVersion, latestSkillVersion, minimumSkillVersion, downloadUrl, sha256]
+          properties:
+            apiVersion:
+              type: string
+              const: v1
+            latestSkillVersion:
+              type: string
+            minimumSkillVersion:
+              type: string
+            downloadUrl:
+              type: string
+              format: uri
+            sha256:
+              type: string
+              pattern: "^[a-f0-9]{64}$"
+            releasedAt:
+              type: string
+              format: date
+            releaseNotes:
+              type: string
+        meta:
+          $ref: "#/components/schemas/ApiMeta"
+    PreviewLine:
+      type: object
+      required: [zh, en]
+      properties:
+        zh:
+          type: string
+          minLength: 1
+          maxLength: 30000
+        en:
+          type: string
+          minLength: 1
+          maxLength: 30000
+    ScriptImport:
+      type: object
+      required:
+        - title
+        - englishTitle
+        - genre
+        - logline
+        - synopsis
+        - directorStatement
+        - previewRationale
+        - sourceUnitCount
+        - previewUnitLabel
+        - presentationMode
+        - packageMode
+        - episodes
+        - tags
+        - preview
+        - previewVisibleCount
+        - cover
+        - english
+        - secondary
+        - director
+      properties:
+        title:
+          type: string
+          maxLength: 120
+        englishTitle:
+          type: string
+          maxLength: 180
+        genre:
+          type: string
+          enum: [BL, GL, GB]
+        logline:
+          type: string
+          maxLength: 600
+        synopsis:
+          type: string
+          maxLength: 8000
+        directorStatement:
+          type: string
+          description: 500-1000 Chinese-character production execution summary.
+          maxLength: 30000
+        previewRationale:
+          type: string
+          maxLength: 1000
+        sourceUnitCount:
+          type: integer
+          minimum: 1
+        previewUnitLabel:
+          type: string
+          const: 段
+        presentationMode:
+          type: string
+          enum: [解说, 演绎]
+        packageMode:
+          type: string
+          const: bilingual-package
+        episodes:
+          type: integer
+          minimum: 1
+        tags:
+          type: string
+          description: JSON-encoded array of no more than 20 strings.
+        preview:
+          type: string
+          description: JSON-encoded array of 1-4 complete EP PreviewLine objects.
+        previewVisibleCount:
+          type: integer
+          minimum: 1
+          maximum: 80
+        cover:
+          type: string
+          format: binary
+        english:
+          type: string
+          format: binary
+        secondary:
+          type: string
+          format: binary
+        director:
+          type: string
+          format: binary
+    ImportResponse:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          type: object
+          required: [importId, scriptId, status, alreadyProcessed]
+          properties:
+            importId:
+              type: string
+              format: uuid
+            scriptId:
+              type: string
+              format: uuid
+            status:
+              type: string
+              const: committed
+            alreadyProcessed:
+              type: boolean
+        meta:
+          $ref: "#/components/schemas/ApiMeta"
