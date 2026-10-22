@@ -88,7 +88,7 @@ export default function Page() {
             <p className='portal-reveal mb-5 text-[11px] font-medium tracking-[0.3em] text-white/65 uppercase'>
               NEW DREAM · NEW DRAMA
             </p>
-            <h1 className='portal-reveal portal-reveal-delay font-serif text-[clamp(4.2rem,10vw,9.5rem)] leading-[0.82] font-medium tracking-[-0.075em] text-[#f7f2e9]'>
+            <h1 className='portal-reveal portal-reveal-delay font-serif text-[clamp(4.2rem,10vw,9.5rem)] leading-[1.05] font-medium tracking-[-0.075em] text-[#f7f2e9]'>
               向新而生
               <br />
               以梦为炬
