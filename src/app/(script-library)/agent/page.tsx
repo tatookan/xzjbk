@@ -3,8 +3,8 @@ import { LibraryHeader } from '@/features/script-library/components/library-head
 import { AGENT_SKILL_DOWNLOAD_PATH, AGENT_SKILL_VERSION } from '@/modules/agent-access/version';
 
 export const metadata = {
-  title: 'Agent 接入 | 心梦剧本库',
-  description: '使用官方 Skill 将本地剧本资料安全提交为心梦剧本库待审核草稿。'
+  title: 'Agent 接入 | 新梦剧本库',
+  description: '使用官方 Skill 将本地剧本资料安全提交为新梦剧本库待审核草稿。'
 };
 
 const downloadHref = `${AGENT_SKILL_DOWNLOAD_PATH}?v=${AGENT_SKILL_VERSION}`;
@@ -50,7 +50,7 @@ export default function AgentPage() {
                   <Icons.terminal size={19} />
                 </span>
                 <div>
-                  <p className='text-sm'>心梦剧本入库</p>
+                  <p className='text-sm'>新梦剧本入库</p>
                   <p className='mt-1 text-xs text-white/34'>官方受限上传能力</p>
                 </div>
               </div>

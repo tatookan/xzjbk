@@ -9,7 +9,7 @@ export default function NotFound() {
           这一幕还没有被写下。
         </h1>
         <p className='mt-6 max-w-lg text-sm leading-7 text-white/55'>
-          页面可能已经移动，或这个地址尚未开放。你可以返回心梦门户，继续浏览作品与剧本。
+          页面可能已经移动，或这个地址尚未开放。你可以返回新梦门户，继续浏览作品与剧本。
         </p>
         <div className='mt-10 flex flex-wrap gap-3'>
           <Link

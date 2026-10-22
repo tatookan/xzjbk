@@ -17,33 +17,33 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'),
   title: {
-    default: '心梦 XINMENG | AI 漫剧制作',
-    template: '%s | 心梦 XINMENG'
+    default: '新梦 XINMENG | AI 漫剧制作',
+    template: '%s | 新梦 XINMENG'
   },
-  description: '从剧本到成片，心梦让每个想象拥有可被观看的形态。',
+  description: '从剧本到成片，新梦让每个想象拥有可被观看的形态。',
   icons: {
     icon: [{ url: '/brand/xinzhi-app-icon.svg', type: 'image/svg+xml' }],
     shortcut: '/brand/xinzhi-app-icon-192.png',
     apple: '/brand/xinzhi-apple-touch-icon.png'
   },
   openGraph: {
-    title: '心梦 XINMENG | AI 漫剧制作',
-    description: '从剧本到成片，心梦让每个想象拥有可被观看的形态。',
-    siteName: '心梦 XINMENG',
+    title: '新梦 XINMENG | AI 漫剧制作',
+    description: '从剧本到成片，新梦让每个想象拥有可被观看的形态。',
+    siteName: '新梦 XINMENG',
     type: 'website',
     images: [
       {
         url: '/portal/hero-keyframe.jpg',
         width: 1672,
         height: 941,
-        alt: '心梦 AI 漫剧制作门户'
+        alt: '新梦 AI 漫剧制作门户'
       }
     ]
   },
   twitter: {
     card: 'summary_large_image',
-    title: '心梦 XINMENG | AI 漫剧制作',
-    description: '从剧本到成片，心梦让每个想象拥有可被观看的形态。',
+    title: '新梦 XINMENG | AI 漫剧制作',
+    description: '从剧本到成片，新梦让每个想象拥有可被观看的形态。',
     images: ['/portal/hero-keyframe.jpg']
   }
 };

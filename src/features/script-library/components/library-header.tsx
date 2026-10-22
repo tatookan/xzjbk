@@ -47,7 +47,7 @@ export function LibraryHeader() {
     <header className='sticky top-0 z-40 border-b border-white/10 bg-[#0d0e11]/88 text-[#f3efe7] backdrop-blur-xl'>
       <div className='mx-auto flex min-h-16 max-w-[1480px] items-center justify-between gap-4 px-5 sm:px-8 lg:px-12'>
         <div className='flex min-w-0 items-center gap-7'>
-          <Link href='/' className='flex shrink-0 items-center gap-3' aria-label='返回心梦门户'>
+          <Link href='/' className='flex shrink-0 items-center gap-3' aria-label='返回新梦门户'>
             <XinzhiBrand
               descriptor='SCRIPT LIBRARY'
               markSize={32}

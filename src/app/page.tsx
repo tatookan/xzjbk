@@ -17,7 +17,7 @@ const xinshuUrl = process.env.NEXT_PUBLIC_XINSHU_URL ?? 'https://drama.xinsee.cc
 
 const navItems: PortalNavItem[] = [
   { label: '首页', href: '#home' },
-  { label: '心梦 Studio', href: '#studio' },
+  { label: '新梦 Studio', href: '#studio' },
   { label: '漫剧作品', href: '#works' },
   {
     label: '剧本库',
@@ -56,7 +56,7 @@ export default function Page() {
     <main className='portal-page min-h-screen bg-[#0b0c0e] text-[#f4f0e8]'>
       <header className='fixed inset-x-0 top-0 z-50 border-b border-white/10 bg-[#0b0c0e]/70 backdrop-blur-xl'>
         <div className='mx-auto flex h-[72px] max-w-[1480px] items-center justify-between px-5 sm:px-8 lg:px-12'>
-          <a href='#home' className='group flex items-center gap-3' aria-label='心梦首页'>
+          <a href='#home' className='group flex items-center gap-3' aria-label='新梦首页'>
             <XinzhiBrand
               markSize={34}
               className='text-[#f4f0e8] transition-opacity group-hover:opacity-[.78]'
@@ -95,11 +95,11 @@ export default function Page() {
             </h1>
             <div className='portal-reveal portal-reveal-delay-2 mt-8 flex max-w-[690px] flex-col justify-between gap-7 border-t border-white/25 pt-6 sm:flex-row sm:items-end'>
               <p className='max-w-md text-[15px] leading-7 text-white/72 sm:text-base'>
-                从剧本到成片，心梦让每个想象拥有可被观看的形态。
+                从剧本到成片，新梦让每个想象拥有可被观看的形态。
               </p>
               <div className='flex flex-wrap gap-3'>
                 <ArrowLink href='#studio' tone='light'>
-                  进入心梦 Studio
+                  进入新梦 Studio
                 </ArrowLink>
                 <ArrowLink
                   href={scriptLibraryUrl}
@@ -130,7 +130,7 @@ export default function Page() {
         <div className='relative mx-auto flex min-h-[82svh] max-w-[1480px] items-center px-5 py-24 sm:px-8 lg:px-12'>
           <div className='max-w-3xl'>
             <p className='mb-5 text-[11px] tracking-[0.28em] text-[#d84a3f] uppercase'>
-              心梦 Studio
+              新梦 Studio
             </p>
             <h2 className='font-serif text-[clamp(3.4rem,7.2vw,7.8rem)] leading-[0.9] tracking-[-0.065em]'>
               一站式漫剧

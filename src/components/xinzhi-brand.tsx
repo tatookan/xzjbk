@@ -38,7 +38,7 @@ export function XinzhiBrand({
             wordmarkClassName
           )}
         >
-          心梦
+          新梦
         </span>
         {descriptor ? (
           <span

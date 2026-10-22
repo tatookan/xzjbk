@@ -1,7 +1,7 @@
 import { LegalDocument } from '@/features/script-library/components/legal-document';
 import type { Metadata } from 'next';
 
-export const metadata: Metadata = { title: '用户协议 | 心梦剧本库' };
+export const metadata: Metadata = { title: '用户协议 | 新梦剧本库' };
 
 const sections = [
   {
@@ -58,7 +58,7 @@ export default function TermsPage() {
       title='用户协议'
       englishTitle='Terms of service'
       updatedAt='2026 年 9 月 6 日'
-      introduction='欢迎使用心梦剧本库。请在注册和使用服务前认真阅读本协议，特别是关于内容使用、独家购买、知识产权和责任限制的条款。完成勾选并注册，即表示你已阅读、理解并同意本协议。'
+      introduction='欢迎使用新梦剧本库。请在注册和使用服务前认真阅读本协议，特别是关于内容使用、独家购买、知识产权和责任限制的条款。完成勾选并注册，即表示你已阅读、理解并同意本协议。'
       sections={sections}
     />
   );
