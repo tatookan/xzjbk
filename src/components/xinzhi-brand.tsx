@@ -11,7 +11,7 @@ type XinzhiBrandProps = {
 };
 
 export function XinzhiBrand({
-  descriptor = 'XINZHI PICTURES',
+  descriptor = 'XINMENG PICTURES',
   markSize = 36,
   tone = 'dark',
   className,
@@ -38,7 +38,7 @@ export function XinzhiBrand({
             wordmarkClassName
           )}
         >
-          心智
+          心梦
         </span>
         {descriptor ? (
           <span

@@ -465,7 +465,7 @@ export function AccountScreen() {
         </section>
 
         <footer className='mt-14 flex flex-col gap-3 border-t border-white/8 pt-6 text-[11px] text-white/24 sm:flex-row sm:items-center sm:justify-between'>
-          <p>心智剧本库会员服务</p>
+          <p>心梦剧本库会员服务</p>
           <nav className='flex gap-5' aria-label='法律信息'>
             <Link href='/terms' className='transition-colors hover:text-white/52'>
               用户协议

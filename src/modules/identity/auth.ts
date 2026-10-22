@@ -13,7 +13,7 @@ function createAuth() {
   }
 
   return betterAuth({
-    appName: '心智剧本库',
+    appName: '心梦剧本库',
     baseURL: env.NEXT_PUBLIC_APP_URL,
     secret: env.BETTER_AUTH_SECRET,
     trustedOrigins: [env.NEXT_PUBLIC_APP_URL],

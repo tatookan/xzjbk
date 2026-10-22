@@ -95,7 +95,7 @@ export function LoginScreen() {
 
       <section className='flex min-h-screen flex-col px-5 py-6 sm:px-10 lg:px-16 xl:px-24'>
         <div className='flex items-center justify-between'>
-          <Link href='/' className='flex items-center gap-3' aria-label='返回心智门户'>
+          <Link href='/' className='flex items-center gap-3' aria-label='返回心梦门户'>
             <XinzhiBrand descriptor='SCRIPT LIBRARY' markSize={36} />
           </Link>
           <Link

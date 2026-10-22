@@ -490,7 +490,7 @@ export function ScriptDetail() {
               </div>
               <div className='pointer-events-none absolute inset-0 z-10 grid place-items-center overflow-hidden opacity-[0.045]'>
                 <span className='rotate-[-20deg] text-6xl font-semibold tracking-[0.12em] whitespace-nowrap'>
-                  心智剧本库 · 白名单试读
+                  心梦剧本库 · 白名单试读
                 </span>
               </div>
               <div className='relative px-6 py-4 sm:px-9 sm:py-7'>

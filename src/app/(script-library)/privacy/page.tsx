@@ -1,7 +1,7 @@
 import { LegalDocument } from '@/features/script-library/components/legal-document';
 import type { Metadata } from 'next';
 
-export const metadata: Metadata = { title: '隐私政策 | 心智剧本库' };
+export const metadata: Metadata = { title: '隐私政策 | 心梦剧本库' };
 
 const sections = [
   {
@@ -63,7 +63,7 @@ export default function PrivacyPage() {
       title='隐私政策'
       englishTitle='Privacy policy'
       updatedAt='2026 年 9 月 6 日'
-      introduction='心智剧本库重视用户信息安全。本政策说明我们为提供白名单注册、账户、心源交易和剧本交付服务时，如何收集、使用、保存和保护个人信息。'
+      introduction='心梦剧本库重视用户信息安全。本政策说明我们为提供白名单注册、账户、心源交易和剧本交付服务时，如何收集、使用、保存和保护个人信息。'
       sections={sections}
     />
   );

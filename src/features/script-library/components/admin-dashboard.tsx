@@ -931,7 +931,7 @@ export function AdminDashboard() {
           </div>
           <div className='flex items-center gap-3 text-xs text-white/42'>
             <span className='size-2 rounded-full bg-emerald-400' />
-            <span>管理员 · {currentUser?.name ?? '心智管理员'}</span>
+            <span>管理员 · {currentUser?.name ?? '心梦管理员'}</span>
           </div>
         </header>
         <div className='p-5 sm:p-8 lg:p-10 xl:p-12'>{renderContent()}</div>
