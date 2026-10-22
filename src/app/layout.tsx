@@ -20,7 +20,7 @@ export const metadata: Metadata = {
     default: '新梦 XINMENG | AI 漫剧制作',
     template: '%s | 新梦 XINMENG'
   },
-  description: '从剧本到成片，新梦让每个想象拥有可被观看的形态。',
+  description: '新梦，一站式 AI 漫剧创作平台。让构想落地，让故事远航。',
   icons: {
     icon: [{ url: '/brand/xinzhi-app-icon.svg', type: 'image/svg+xml' }],
     shortcut: '/brand/xinzhi-app-icon-192.png',
@@ -28,7 +28,7 @@ export const metadata: Metadata = {
   },
   openGraph: {
     title: '新梦 XINMENG | AI 漫剧制作',
-    description: '从剧本到成片，新梦让每个想象拥有可被观看的形态。',
+    description: '新梦，一站式 AI 漫剧创作平台。让构想落地，让故事远航。',
     siteName: '新梦 XINMENG',
     type: 'website',
     images: [
@@ -43,7 +43,7 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: '新梦 XINMENG | AI 漫剧制作',
-    description: '从剧本到成片，新梦让每个想象拥有可被观看的形态。',
+    description: '新梦，一站式 AI 漫剧创作平台。让构想落地，让故事远航。',
     images: ['/portal/hero-keyframe.jpg']
   }
 };

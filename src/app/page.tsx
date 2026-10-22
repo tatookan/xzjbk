@@ -86,16 +86,16 @@ export default function Page() {
         <div className='relative z-10 mx-auto w-full max-w-[1480px] px-5 pb-20 sm:px-8 sm:pb-24 lg:px-12 lg:pb-28'>
           <div className='max-w-[820px]'>
             <p className='portal-reveal mb-5 text-[11px] font-medium tracking-[0.3em] text-white/65 uppercase'>
-              AI 漫剧制作
+              NEW DREAM · NEW DRAMA
             </p>
             <h1 className='portal-reveal portal-reveal-delay font-serif text-[clamp(4.2rem,10vw,9.5rem)] leading-[0.82] font-medium tracking-[-0.075em] text-[#f7f2e9]'>
-              用心做
+              向新而生
               <br />
-              用户爱看的短剧
+              以梦为炬
             </h1>
             <div className='portal-reveal portal-reveal-delay-2 mt-8 flex max-w-[690px] flex-col justify-between gap-7 border-t border-white/25 pt-6 sm:flex-row sm:items-end'>
               <p className='max-w-md text-[15px] leading-7 text-white/72 sm:text-base'>
-                从剧本到成片，新梦让每个想象拥有可被观看的形态。
+                新梦，一站式 AI 漫剧创作平台。让构想落地，让故事远航。
               </p>
               <div className='flex flex-wrap gap-3'>
                 <ArrowLink href='#studio' tone='light'>
@@ -187,7 +187,7 @@ export default function Page() {
       <footer className='bg-[#0b0c0e] px-5 py-8 text-[11px] tracking-[0.18em] text-white/40 sm:px-8 lg:px-12'>
         <div className='mx-auto flex max-w-[1480px] flex-col gap-3 sm:flex-row sm:items-center sm:justify-between'>
           <span>© 2026 XINMENG PICTURES</span>
-          <span>用心做用户爱看的短剧</span>
+          <span>向新而生，以梦为炬</span>
         </div>
       </footer>
     </main>
