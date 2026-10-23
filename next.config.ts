@@ -38,6 +38,9 @@ const nextConfig: NextConfig = {
   compiler: {
     removeConsole: process.env.NODE_ENV === 'production' ? { exclude: ['error', 'warn'] } : false
   },
+  async redirects() {
+    return [{ source: '/bp', destination: '/bp/index.html', permanent: true }];
+  },
   async headers() {
     return [
       {
