@@ -1683,6 +1683,32 @@ img {
   font-size: 14px;
   line-height: 1.75;
 }
+.founder-doc-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 16px;
+  padding: 10px 16px;
+  color: #fff;
+  background: var(--blue);
+  border-radius: 999px;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-decoration: none;
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
+}
+
+.founder-doc-link:hover {
+  opacity: 0.88;
+  transform: translateY(-1px);
+}
+
+.founder-doc-link span {
+  font-size: 13px;
+}
+
 .founder-points {
   display: grid;
   grid-template-rows: repeat(4, 1fr);
