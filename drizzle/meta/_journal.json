@@ -57,6 +57,13 @@
       "when": 1789200557625,
       "tag": "0007_agent-access",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1792829370279,
+      "tag": "0008_user-soft-delete",
+      "breakpoints": true
     }
   ]
 }

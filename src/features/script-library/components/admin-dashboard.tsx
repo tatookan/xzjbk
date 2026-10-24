@@ -129,6 +129,9 @@ export function AdminDashboard() {
   const [deletingScript, setDeletingScript] = useState<DemoScript | null>(null);
   const [editingUser, setEditingUser] = useState<DemoUser | null>(null);
   const [adjustingUser, setAdjustingUser] = useState(false);
+  const [deletingUser, setDeletingUser] = useState<DemoUser | null>(null);
+  const [deletingUserBusy, setDeletingUserBusy] = useState(false);
+  const [deletedUserIds, setDeletedUserIds] = useState<string[]>([]);
   const [scriptQuery, setScriptQuery] = useState('');
   const [scriptStatus, setScriptStatus] = useState<'all' | DemoScript['status']>('all');
   const [invites, setInvites] = useState<AdminInvite[]>([]);
@@ -245,6 +248,32 @@ export function AdminDashboard() {
     }
     setEditingUser(null);
     toast.success(result.message);
+  };
+
+  const confirmUserDelete = async () => {
+    if (!deletingUser) return;
+    setDeletingUserBusy(true);
+    try {
+      const response = await fetch(`/api/v1/admin/users/${deletingUser.id}`, {
+        method: 'DELETE'
+      });
+      const payload = (await response.json()) as {
+        success: boolean;
+        error?: { message?: string };
+      };
+      if (!response.ok || !payload.success) {
+        toast.error(payload.error?.message ?? '用户删除失败');
+        return;
+      }
+      const removedId = deletingUser.id;
+      setDeletedUserIds((ids) => (ids.includes(removedId) ? ids : [...ids, removedId]));
+      setDeletingUser(null);
+      toast.success('注册用户已删除，原邮箱可重新注册');
+    } catch {
+      toast.error('当前无法连接用户账户服务');
+    } finally {
+      setDeletingUserBusy(false);
+    }
   };
 
   const createInvite = async () => {
@@ -600,34 +629,45 @@ export function AdminDashboard() {
                     </td>
                   </tr>
                 ) : null}
-                {users.map((user) => (
-                  <tr key={user.id} className='border-b border-white/8 last:border-b-0'>
-                    <td className='px-5 py-4'>
-                      <p>{user.name}</p>
-                      <p className='mt-1 text-xs text-white/30'>{user.email}</p>
-                    </td>
-                    <td className='px-5 py-4 text-white/48'>
-                      {user.role === 'admin' ? '管理员' : '白名单用户'}
-                    </td>
-                    <td className='px-5 py-4 font-mono text-xs tabular-nums'>
-                      {user.points.toLocaleString()}
-                    </td>
-                    <td className='px-5 py-4 text-xs text-white/42'>统一价格</td>
-                    <td className='px-5 py-4 text-right'>
-                      {user.role === 'member' ? (
-                        <button
-                          type='button'
-                          onClick={() => setEditingUser(user)}
-                          className='inline-flex items-center gap-1 text-xs text-[#df675c]'
-                        >
-                          <Icons.edit size={14} /> 调整
-                        </button>
-                      ) : (
-                        <span className='text-xs text-white/24'>不可调整</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
+                {users
+                  .filter((user) => !deletedUserIds.includes(user.id))
+                  .map((user) => (
+                    <tr key={user.id} className='border-b border-white/8 last:border-b-0'>
+                      <td className='px-5 py-4'>
+                        <p>{user.name}</p>
+                        <p className='mt-1 text-xs text-white/30'>{user.email}</p>
+                      </td>
+                      <td className='px-5 py-4 text-white/48'>
+                        {user.role === 'admin' ? '管理员' : '白名单用户'}
+                      </td>
+                      <td className='px-5 py-4 font-mono text-xs tabular-nums'>
+                        {user.points.toLocaleString()}
+                      </td>
+                      <td className='px-5 py-4 text-xs text-white/42'>统一价格</td>
+                      <td className='px-5 py-4 text-right'>
+                        {user.role === 'member' ? (
+                          <span className='inline-flex items-center gap-4 text-xs'>
+                            <button
+                              type='button'
+                              onClick={() => setEditingUser(user)}
+                              className='inline-flex items-center gap-1 text-[#df675c]'
+                            >
+                              <Icons.edit size={14} /> 调整
+                            </button>
+                            <button
+                              type='button'
+                              onClick={() => setDeletingUser(user)}
+                              className='inline-flex items-center gap-1 text-white/38 transition-colors hover:text-[#df675c]'
+                            >
+                              <Icons.trash size={14} /> 删除
+                            </button>
+                          </span>
+                        ) : (
+                          <span className='text-xs text-white/24'>不可调整</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
                 {!usersLoading && !users.length ? (
                   <tr>
                     <td colSpan={5} className='px-5 py-14 text-center text-sm text-white/34'>
@@ -1036,6 +1076,48 @@ export function AdminDashboard() {
               </button>
             </div>
           </form>
+        ) : null}
+      </DemoModal>
+
+      <DemoModal
+        open={Boolean(deletingUser)}
+        onClose={() => setDeletingUser(null)}
+        title={deletingUser ? `删除 ${deletingUser.name}` : '删除用户'}
+        eyebrow='Account controls'
+      >
+        {deletingUser ? (
+          <div className='space-y-5'>
+            <div className='border-y border-white/10 py-4 text-sm'>
+              <p className='text-xs text-white/32'>账号</p>
+              <p className='mt-1 break-all'>{deletingUser.email}</p>
+            </div>
+            <div className='space-y-2 border border-[#d84a3f]/40 bg-[#d84a3f]/8 p-4 text-xs leading-6 text-white/62'>
+              <p>
+                删除后该账号会立即退出全部会话，Agent Key
+                全部吊销，并从用户列表移除；原邮箱之后可凭新注册码重新注册。
+              </p>
+              <p>
+                仅允许删除没有心源余额、流水、充值订单和剧本订单的干净注册账号；操作会写入审计记录，不可恢复。
+              </p>
+            </div>
+            <div className='flex gap-3 pt-1'>
+              <button
+                type='button'
+                onClick={() => setDeletingUser(null)}
+                className='h-11 flex-1 border border-white/14'
+              >
+                取消
+              </button>
+              <button
+                type='button'
+                onClick={() => void confirmUserDelete()}
+                disabled={deletingUserBusy}
+                className='inline-flex h-11 flex-1 items-center justify-center gap-2 border border-[#d84a3f]/70 bg-[#d84a3f]/10 text-sm text-[#ec7c72] transition-colors hover:bg-[#d84a3f]/18 active:translate-y-px disabled:cursor-wait disabled:opacity-55'
+              >
+                <Icons.trash size={15} /> {deletingUserBusy ? '正在删除…' : '确认删除'}
+              </button>
+            </div>
+          </div>
         ) : null}
       </DemoModal>
     </main>

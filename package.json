@@ -25,8 +25,8 @@
     "lint": "oxlint",
     "lint:fix": "oxlint --fix && npm run format",
     "lint:strict": "oxlint --deny-warnings",
-    "format": "oxfmt --write . '!**/*.md' '!**/*.mdc' '!**/*.mdx' '!**/*.yml' '!**/*.yaml'",
-    "format:check": "oxfmt --check . '!**/*.md' '!**/*.mdc' '!**/*.mdx' '!**/*.yml' '!**/*.yaml'",
+    "format": "oxfmt --write . '!**/*.md' '!**/*.mdc' '!**/*.mdx' '!**/*.yml' '!**/*.yaml' '!public/bp/**'",
+    "format:check": "oxfmt --check . '!**/*.md' '!**/*.mdc' '!**/*.mdx' '!**/*.yml' '!**/*.yaml' '!public/bp/**'",
     "prepare": "husky"
   },
   "dependencies": {

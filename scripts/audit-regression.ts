@@ -80,6 +80,7 @@ async function main() {
     const assetsRoute = await import('../src/app/api/v1/assets/[id]/route');
     const adminRoute = await import('../src/app/api/v1/admin/scripts/[id]/route');
     const pointsRoute = await import('../src/app/api/v1/admin/users/[id]/points/route');
+    const userAdminRoute = await import('../src/app/api/v1/admin/users/[id]/route');
     const agentAccess = await import('../src/modules/agent-access/service');
     const agentImportRoute = await import('../src/app/api/agent/v1/imports/route');
     const password = randomUUID();
@@ -359,6 +360,72 @@ async function main() {
       const [consent] =
         await query`select count(*)::int as count from users where terms_accepted_at is not null and privacy_accepted_at is not null`;
       assert.equal(consent.count, 1);
+    });
+    await check('admin can delete clean registered users and free their emails', async () => {
+      const firstInvite = await invites.generateInviteCode(identities.admin);
+      const email = 'deletable@audit.invalid';
+      const registerBody = {
+        name: 'Deletable member',
+        password,
+        email,
+        inviteCode: firstInvite.code,
+        acceptedPolicies: true
+      };
+      assert.equal(
+        (
+          await registration.POST(
+            req('/register', '', 'POST', registerBody)
+          )
+        ).status,
+        201
+      );
+      const [created] = await query`select id from users where email = ${email}`;
+      assert.ok(created, 'registered user exists');
+
+      const userContext = (id: string) => ({ params: Promise.resolve({ id }) });
+      assert.equal(
+        (await userAdminRoute.DELETE(req(`/api/v1/admin/users/${created.id}`, 'a', 'DELETE'), userContext(created.id))).status,
+        403,
+        'members cannot delete users'
+      );
+      assert.equal(
+        (await userAdminRoute.DELETE(req(`/api/v1/admin/users/${identities.admin}`, 'admin', 'DELETE'), userContext(identities.admin))).status,
+        409,
+        'admins cannot delete themselves'
+      );
+      assert.equal(
+        (await userAdminRoute.DELETE(req(`/api/v1/admin/users/${identities.b}`, 'admin', 'DELETE'), userContext(identities.b))).status,
+        409,
+        'users with orders cannot be deleted'
+      );
+      assert.equal(
+        (await userAdminRoute.DELETE(req(`/api/v1/admin/users/${created.id}`, 'admin', 'DELETE'), userContext(created.id))).status,
+        200,
+        'clean registered user deletion'
+      );
+
+      const [deleted] = await query`select name, email, deleted_at from users where id = ${created.id}`;
+      assert.ok(deleted.deleted_at, 'user is soft deleted');
+      assert.equal(deleted.name, '已注销用户');
+      assert.notEqual(deleted.email, email);
+      const [sessionCount] = await query`select count(*)::int as count from sessions where user_id = ${created.id}`;
+      assert.equal(sessionCount.count, 0, 'sessions are revoked');
+      const [auditCount] = await query`select count(*)::int as count from audit_logs where action = 'user.delete' and entity_id = ${created.id}`;
+      assert.equal(auditCount.count, 1, 'deletion is audited');
+
+      const secondInvite = await invites.generateInviteCode(identities.admin);
+      assert.equal(
+        (
+          await registration.POST(
+            req('/register', '', 'POST', {
+              ...registerBody,
+              inviteCode: secondInvite.code
+            })
+          )
+        ).status,
+        201,
+        'deleted email can register again'
+      );
     });
     await check('Agent Key stays user-bound and can only create an idempotent draft', async () => {
       await agentAccess.setAgentAccess(identities.a, true, identities.admin);

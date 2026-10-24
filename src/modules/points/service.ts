@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, sql, isNull } from 'drizzle-orm';
 
 import { getDatabase } from '@/infrastructure/database/client';
 import {
@@ -81,7 +81,11 @@ export async function getAccountPoints(userId: string): Promise<AccountPointsDto
 }
 
 export async function listPointsUsers(): Promise<PointsUserDto[]> {
-  const rows = await getDatabase().select().from(users).orderBy(desc(users.createdAt));
+  const rows = await getDatabase()
+    .select()
+    .from(users)
+    .where(isNull(users.deletedAt))
+    .orderBy(desc(users.createdAt));
   return rows.map(userDto);
 }
 

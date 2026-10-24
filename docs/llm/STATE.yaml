@@ -1,6 +1,6 @@
 schema_version: 1
 project: xinzhi_portal_and_script_library
-updated_at: "2026-09-13"
+updated_at: "2026-10-24"
 phase: production
 progress_percent: 98
 progress_basis: current_release_deployed_and_accepted_with_operational_hardening_remaining
@@ -36,6 +36,7 @@ capabilities:
   admin_script_management: complete
   heart_points_account: complete
   admin_points_adjustment: complete
+  admin_registered_user_deletion: complete
   exclusive_purchase: complete
   orders_and_private_downloads: complete
   combined_delivery_zip_download: complete
@@ -88,7 +89,7 @@ release_audit:
   local_database_test_version: PostgreSQL_14_20
   isolated_database_regression_groups: 10
   synthetic_api_browser_scenarios: 3
-  latest_migration: 0007_agent-access
+  latest_migration: 0008_user-soft-delete
   production_database_version: PostgreSQL_17
   production_smoke_passed: true
   production_admin_login_passed: true

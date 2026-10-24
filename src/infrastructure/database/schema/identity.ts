@@ -30,11 +30,13 @@ export const users = pgTable(
     termsVersion: text('terms_version'),
     privacyAcceptedAt: timestamp('privacy_accepted_at', { withTimezone: true }),
     privacyVersion: text('privacy_version'),
+    deletedAt: timestamp('deleted_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
   },
   (table) => [
     uniqueIndex('users_email_unique').on(table.email),
+    index('users_deleted_at_idx').on(table.deletedAt),
     check('users_points_nonnegative', sql`${table.pointsBalance} >= 0`)
   ]
 );
