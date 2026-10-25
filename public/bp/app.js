@@ -1,23 +1,57 @@
 (function () {
   var rateButtons = document.querySelectorAll('.rate-button');
-  var perTitle = document.getElementById('per-title');
-  var companyRetained = document.getElementById('company-retained');
-  var operatingRoom = document.getElementById('operating-room');
-  var averagePlaysInTenThousands = 69.45049333333333;
+  var scenarioRows = document.getElementById('scenario-rows');
+  var playbackScenarios = [
+    { name: '审慎', low: 600, high: 900, basis: '去掉头部后的历史样本' },
+    { name: '基准', low: 900, high: 1200, basis: '去极值均值至全样本均值' },
+    { name: '向上', low: 1200, high: 1600, basis: '首 30 天趋势外推' }
+  ];
   var monthlyTitles = 12;
-  var companyShare = 0.51;
-  var monthlyCost = 26400;
+  var monthlyCompute = 13000;
+  var monthlyOverhead = 14400;
 
   function money(value) {
     return '¥' + Math.round(value).toLocaleString('zh-CN');
   }
 
+  function range(low, high, formatter) {
+    return formatter(low) + '—' + formatter(high);
+  }
+
   function updateEconomics(rate) {
-    var titleSettlement = averagePlaysInTenThousands * rate;
-    var retained = titleSettlement * monthlyTitles * companyShare;
-    perTitle.textContent = money(titleSettlement);
-    companyRetained.textContent = money(retained);
-    operatingRoom.textContent = money(retained - monthlyCost);
+    scenarioRows.innerHTML = playbackScenarios
+      .map(function (scenario) {
+        var settlementLow = scenario.low * rate;
+        var settlementHigh = scenario.high * rate;
+        var companyLow = (settlementLow - monthlyCompute) * 0.51 - monthlyOverhead;
+        var companyHigh = (settlementHigh - monthlyCompute) * 0.51 - monthlyOverhead;
+        return (
+          '<tr><th scope="row">' +
+          scenario.name +
+          '<span>' +
+          scenario.basis +
+          '</span></th>' +
+          '<td data-label="12 部首 30 天有效播放"><strong>' +
+          range(scenario.low, scenario.high, function (value) {
+            return value.toLocaleString('zh-CN');
+          }) +
+          ' 万</strong></td>' +
+          '<td data-label="折合单剧平均">' +
+          range(scenario.low / monthlyTitles, scenario.high / monthlyTitles, function (value) {
+            return value.toFixed(0);
+          }) +
+          ' 万</td>' +
+          '<td data-label="预估结算额"><strong>' +
+          range(settlementLow, settlementHigh, money) +
+          '</strong></td>' +
+          '<td data-label="公司可留测算*" class="' +
+          (companyLow < 0 ? 'is-negative' : '') +
+          '"><strong>' +
+          range(companyLow, companyHigh, money) +
+          '</strong></td></tr>'
+        );
+      })
+      .join('');
   }
 
   rateButtons.forEach(function (button) {
@@ -29,6 +63,7 @@
       updateEconomics(Number(button.dataset.rate));
     });
   });
+  updateEconomics(100);
 
   var revealObserver = new IntersectionObserver(
     function (entries) {
@@ -44,6 +79,39 @@
 
   document.querySelectorAll('.reveal').forEach(function (element) {
     revealObserver.observe(element);
+  });
+
+  var loopButtons = Array.prototype.slice.call(document.querySelectorAll('[data-loop-step]'));
+  var loopPanels = Array.prototype.slice.call(document.querySelectorAll('[data-loop-panel]'));
+
+  function activateLoopStep(index) {
+    loopButtons.forEach(function (button, buttonIndex) {
+      var isActive = buttonIndex === index;
+      button.classList.toggle('is-active', isActive);
+      button.setAttribute('aria-pressed', String(isActive));
+    });
+    loopPanels.forEach(function (panel, panelIndex) {
+      panel.classList.toggle('is-active', panelIndex === index);
+    });
+  }
+
+  loopButtons.forEach(function (button, index) {
+    button.addEventListener('click', function () {
+      activateLoopStep(index);
+    });
+    button.addEventListener('keydown', function (event) {
+      var offset =
+        event.key === 'ArrowRight' || event.key === 'ArrowDown'
+          ? 1
+          : event.key === 'ArrowLeft' || event.key === 'ArrowUp'
+            ? -1
+            : 0;
+      if (!offset) return;
+      event.preventDefault();
+      var next = (index + offset + loopButtons.length) % loopButtons.length;
+      activateLoopStep(next);
+      loopButtons[next].focus();
+    });
   });
 
   var navLinks = document.querySelectorAll('.desktop-nav a');
@@ -122,8 +190,17 @@
   var parallaxPlan = [
     ['.hero-copy', 20],
     ['.hero-visual', 46],
-    ['.domestic-validation-copy', 16],
+    ['.chapter-divider-media img', 24],
+    ['.relationship-map', 22],
+    ['.founder-layout', 22],
+    ['.founder-timeline', 18],
+    ['.founder-event-visual', 22],
+    ['.event-logo-row', 12],
+    ['.legacy-stats', 14],
     ['.domestic-proof-grid', 24],
+    ['.partner-cases', 20],
+    ['.market-metrics', 20],
+    ['.market-region', 16],
     ['.poster-a', 14],
     ['.poster-b', 28],
     ['.poster-c', 40],
@@ -134,20 +211,19 @@
     ['.works-header', 12],
     ['.work-scroller', 22],
     ['.pipeline', 16],
-    ['.system-flow', 14],
     ['.product-proof-heading', 12],
     ['.product-deck', 30],
-    ['.moat-layout', 16],
+    ['.moat-cycle', 16],
     ['.calculator', 22],
     ['.split-model', 15],
-    ['.month-line', 18],
-    ['.decision-rule', 12],
-    ['.founder-layout', 22],
-    ['.founder-timeline', 18],
+    ['.roadmap-phases', 18],
+    ['.roadmap-growth', 12],
     ['.team-grid', 15],
     ['.funding-summary', 16],
     ['.funding-paths', 22],
     ['.use-of-funds', 15],
+    ['.funding-stair', 22],
+    ['.early-investor', 15],
     ['.closing-section > h2', 28],
     ['.closing-copy', 15],
     ['.closing-values', 22]
@@ -344,6 +420,7 @@
   }
 
   initAutoScroller('.domestic-proof-grid', 18);
+  initAutoScroller('.partner-cases', 18);
   initAutoScroller('.work-scroller', 22);
   initAutoScroller('.founder-gallery', 20);
 
