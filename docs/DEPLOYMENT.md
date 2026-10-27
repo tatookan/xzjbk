@@ -99,3 +99,15 @@ EXPECT_PRODUCTION_HEADERS=true SMOKE_BASE_URL=https://scripts.example.com npm ru
 - 支付宝按钮保持“暂未开放”，`PAYMENT_DRIVER=disabled`。
 - `/api/v1/readiness` 返回 200，生产安全响应头存在。
 - 数据库卷、私有文件卷和异机备份均已配置。
+
+## 2026-10 云端迁移后的生产拓扑
+
+- 生产服务器：腾讯云轻量 `124.223.177.10`（上海四区，2C/4G/69G，Ubuntu 24.04 + Docker 29 预装，swap 1.9G）
+- 规范入口：`https://newdreamai.top:8443`（门户与剧本库），`https://newdreamai.top:9444/xinshu/`（心术）
+- 应用部署目录：`/srv/xinzhi/app`，Compose 项目名仍为 `xinzhi`；数据库与私有文件在命名卷 `xinzhi_xinzhi-postgres`、`xinzhi_xinzhi-storage`
+- 心术：`tatookan` 用户级服务 `xinshu-web`（uvicorn 8767，Python 3.12 venv）+ 系统级 `xinshu-proxy`（Caddy 9444），代码在 `/home/tatookan/xinshu-stage`
+- 防火墙：腾讯轻量防火墙放行 TCP 443/8443/9444；443/80 的域名直连仍需完成 ICP 备案后启用
+- 证书：新服务器无法直连 Let's Encrypt。`newdreamai.top` 由旧服务器 acme.sh（DNSPod DNS 验证）签发；xinsee 系域名由旧服务器 Caddy（火山 DNS 验证）续期。两者均每日自动同步到新服务器并重载（`xinmeng-cert-sync` 与 `newdreamai-cert-sync`）
+- 旧服务器（192.168.88.148）职责：仅保留 `js.xinsee.cc`、`comic.xinsee.cc` 与证书签发/续期；门户与心术容器已关停，代码与卷保留为回滚副本
+- 心术登录 Host 白名单：`XINSHU_ALLOWED_HOSTS` 需包含 `newdreamai.top`；Caddy 反代不得改写 Host，否则应用 Origin 校验会拒绝登录
+- npm 源：Dockerfile 默认使用腾讯云 npm 镜像，保证大陆服务器可构建
