@@ -13,7 +13,7 @@ const studioCnUrl =
   'https://studio.xinsee.cc/v2';
 const studioGlobalUrl = process.env.NEXT_PUBLIC_STUDIO_GLOBAL_URL ?? 'https://newxzs.xinsee.cc/';
 const scriptLibraryUrl = process.env.NEXT_PUBLIC_SCRIPT_LIBRARY_URL ?? '/scripts';
-const xinshuUrl = process.env.NEXT_PUBLIC_XINSHU_URL ?? 'https://drama.xinsee.cc:9444';
+const xinshuUrl = process.env.NEXT_PUBLIC_XINSHU_URL ?? 'https://newdreamai.top:9444';
 
 const navItems: PortalNavItem[] = [
   { label: '首页', href: '#home' },
