@@ -1,9 +1,11 @@
 ARG NODE_VERSION=22-slim
+ARG NPM_REGISTRY=https://mirrors.cloud.tencent.com/npm/
 
 FROM node:${NODE_VERSION} AS dependencies
 WORKDIR /app
+ARG NPM_REGISTRY
 COPY package.json package-lock.json ./
-RUN --mount=type=cache,target=/root/.npm npm ci
+RUN --mount=type=cache,target=/root/.npm npm ci --registry=${NPM_REGISTRY}
 
 FROM dependencies AS operations
 WORKDIR /app
