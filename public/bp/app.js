@@ -2,12 +2,12 @@
   var rateButtons = document.querySelectorAll(".rate-button");
   var scenarioRows = document.getElementById("scenario-rows");
   var playbackScenarios = [
-    { name: "审慎", low: 600, high: 900, basis: "去掉头部后的历史样本" },
-    { name: "基准", low: 900, high: 1200, basis: "去极值均值至全样本均值" },
-    { name: "向上", low: 1200, high: 1600, basis: "首 30 天趋势外推" }
+    { name: "保守万播预估", low: 600, high: 900, basis: "去掉头部后的历史样本" },
+    { name: "现有均值预估", low: 900, high: 1200, basis: "去极值均值至全样本均值" },
+    { name: "乐观万播预估", low: 1200, high: 1600, basis: "首 30 天趋势外推" }
   ];
   var monthlyTitles = 12;
-  var monthlyCompute = 13000;
+  var monthlyCompute = 18000;
   var monthlyOverhead = 14400;
 
   function money(value) {
