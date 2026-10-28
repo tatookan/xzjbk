@@ -24,8 +24,7 @@ const navItems: PortalNavItem[] = [
     href: scriptLibraryUrl,
     external: scriptLibraryUrl.startsWith('http')
   },
-  { label: '心术', href: xinshuUrl, external: true },
-  { label: '融资企划', href: '/bp/index.html', external: true }
+  { label: '心术', href: xinshuUrl, external: true }
 ];
 
 function ArrowLink({
