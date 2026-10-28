@@ -16,7 +16,11 @@ function createAuth() {
     appName: '新梦剧本库',
     baseURL: env.NEXT_PUBLIC_APP_URL,
     secret: env.BETTER_AUTH_SECRET,
-    trustedOrigins: [env.NEXT_PUBLIC_APP_URL],
+    trustedOrigins: [
+      env.NEXT_PUBLIC_APP_URL,
+      'https://drama.xinsee.cc:8443',
+      'https://xinsee.cc:8443'
+    ],
     rateLimit: {
       enabled: true,
       storage: 'memory',
