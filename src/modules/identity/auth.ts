@@ -4,6 +4,7 @@ import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { getDatabase } from '@/infrastructure/database/client';
 import { accounts, sessions, users, verifications } from '@/infrastructure/database/schema';
 import { ConfigurationError } from '@/shared/api/errors';
+import { getTrustedOrigins } from '@/shared/api/request';
 import { getServerEnv } from '@/shared/config/server-env';
 
 function createAuth() {
@@ -16,13 +17,7 @@ function createAuth() {
     appName: '新梦剧本库',
     baseURL: env.NEXT_PUBLIC_APP_URL,
     secret: env.BETTER_AUTH_SECRET,
-    trustedOrigins: [
-      env.NEXT_PUBLIC_APP_URL,
-      'https://www.newdreamai.top:30002',
-      'https://www.newdreamai.top',
-      'https://drama.xinsee.cc:8443',
-      'https://xinsee.cc:8443'
-    ],
+    trustedOrigins: getTrustedOrigins(),
     rateLimit: {
       enabled: true,
       storage: 'memory',

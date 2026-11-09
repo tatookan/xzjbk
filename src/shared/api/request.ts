@@ -19,6 +19,15 @@ export async function readJson(request: Request): Promise<unknown> {
   }
 }
 
+export function getTrustedOrigins(): string[] {
+  const configuredUrl = new URL(getServerEnv().NEXT_PUBLIC_APP_URL);
+  const configured = configuredUrl.origin;
+  const wwwVariant = `${configuredUrl.protocol}//www.${configuredUrl.host}`;
+  return Array.from(
+    new Set([configured, wwwVariant, 'https://drama.xinsee.cc:8443', 'https://xinsee.cc:8443'])
+  );
+}
+
 export function assertTrustedOrigin(request: Request): void {
   if (request.headers.get('sec-fetch-site') === 'cross-site') {
     throw new AppError('FORBIDDEN', '请求来源不受信任', 403);
@@ -28,8 +37,8 @@ export function assertTrustedOrigin(request: Request): void {
   if (!origin) return;
 
   try {
-    const expectedOrigin = new URL(getServerEnv().NEXT_PUBLIC_APP_URL).origin;
-    if (new URL(origin).origin !== expectedOrigin) {
+    const requestedOrigin = new URL(origin).origin;
+    if (!getTrustedOrigins().includes(requestedOrigin)) {
       throw new AppError('FORBIDDEN', '请求来源不受信任', 403);
     }
   } catch (error) {
