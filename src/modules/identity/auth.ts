@@ -18,6 +18,8 @@ function createAuth() {
     secret: env.BETTER_AUTH_SECRET,
     trustedOrigins: [
       env.NEXT_PUBLIC_APP_URL,
+      'https://www.newdreamai.top:30002',
+      'https://www.newdreamai.top',
       'https://drama.xinsee.cc:8443',
       'https://xinsee.cc:8443'
     ],
