@@ -5,7 +5,6 @@ import { cn } from '@/lib/utils';
 import { useScriptLibraryDemo } from '@/features/script-library/components/demo-context';
 import { LibraryHeader } from '@/features/script-library/components/library-header';
 import { LibraryMarketSwitch, type LibraryMarket } from '@/features/script-library/components/library-market-switch';
-import { domesticPreviewScripts } from '@/features/script-library/api/domestic-preview';
 import { HeartPointAmount } from '@/features/script-library/components/heart-point-mark';
 import type { DemoScript } from '@/features/script-library/api/types';
 import Image from 'next/image';
@@ -98,7 +97,7 @@ function ScriptCard({ script, purchased }: { script: DemoScript; purchased: bool
   );
 
   const isPreviewFixture = script.id.startsWith('demo-');
-  const previewHref = script.id === 'demo-domestic-wedding' ? '/scripts/demo-domestic-wedding' : script.id === 'demo-overseas-orchard' ? '/scripts/demo-overseas-orchard' : null;
+  const previewHref = null;
 
   return canOpen && (!isPreviewFixture || previewHref) ? (
     <Link
@@ -123,7 +122,7 @@ export function LibraryHome({ market = 'overseas' }: { market?: LibraryMarket })
   const catalogueScripts = useMemo(
     () =>
       (market === 'domestic'
-        ? [...apiScripts.filter((script) => script.market === 'domestic'), ...domesticPreviewScripts]
+        ? apiScripts.filter((script) => script.market === 'domestic')
         : apiScripts.filter((script) => script.market !== 'domestic')
       ).filter((script) => script.status !== 'draft' || role === 'admin'),
     [apiScripts, market, role]
