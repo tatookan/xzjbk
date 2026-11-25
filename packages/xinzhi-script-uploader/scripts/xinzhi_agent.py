@@ -21,10 +21,10 @@ import urllib.parse
 import urllib.request
 import zipfile
 
-from xinzhi_workspace import ValidationError, build_release_package, validate_package
+from xinzhi_workspace import ValidationError, build_release_package, validate_package, build_performance_metadata, extract_docx_paragraphs
 
 
-SKILL_VERSION = "1.1.0"
+SKILL_VERSION = "1.2.0"
 DEFAULT_SERVER = "https://drama.xinsee.cc:8443"
 KEY_PATTERN = re.compile(r"^xz_agent_[a-f0-9]{16}_[A-Za-z0-9_-]{43}$")
 
@@ -481,6 +481,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     package_importer.add_argument("--package", required=True)
     package_importer.set_defaults(handler=command_import_package)
+    register_performance_parser(subparsers)
     return parser
 
 
@@ -494,5 +495,64 @@ def main() -> int:
         return 2
 
 
+
+def cmd_performance_prepare(args):
+    """准备演绎剧本包"""
+    docx_path = Path(args.docx)
+    if not docx_path.exists():
+        print(f"错误：文件不存在 {docx_path}")
+        return 1
+
+    package_mode = args.package_mode
+    if package_mode not in ("performance-cn", "performance-intl"):
+        print(f"错误：无效的演绎模式 {package_mode}")
+        return 1
+
+    if package_mode == "performance-intl" and not args.bilingual_docx:
+        print("错误：海外演绎需要提供中英对照DOCX（--bilingual-docx）")
+        return 1
+
+    print(f"解析 DOCX: {docx_path.name}")
+    try:
+        metadata = build_performance_metadata(str(docx_path), package_mode)
+    except ValidationError as error:
+        print(f"错误：{error}")
+        return 1
+
+    print(f"\n=== 提取结果 ===")
+    print(f"剧名: {metadata['title']}")
+    print(f"类型: {metadata['genre']}")
+    print(f"集数: {metadata['episodes']}")
+    print(f"市场: {metadata['market']}")
+    print(f"人物: {len(metadata['characters'])} 个角色")
+    print(f"试读: {len(metadata['previewLines'])} 集")
+    for ep in metadata["previewLines"]:
+        print(f"  第{ep['ep']}集 {len(ep['lines'])}行")
+
+    # 需要用户确认
+    if not args.yes:
+        print("\n确认以上信息是否正确？[y/N] ", end="", flush=True)
+        if input().strip().lower() != "y":
+            print("已取消")
+            return 0
+
+    print("\n演绎剧本包准备完成（待实现完整打包流程）")
+    print("当前版本已支持元数据提取和预览，完整上传流程将在下一版实现")
+    return 0
+
+
+def register_performance_parser(subparsers):
+    parser = subparsers.add_parser("performance", help="演绎剧本模式")
+    sub = parser.add_subparsers(dest="performance_command")
+
+    prep = sub.add_parser("prepare", help="从DOCX提取演绎剧本元数据")
+    prep.add_argument("docx", help="演绎剧本DOCX文件路径")
+    prep.add_argument("--package-mode", required=True, choices=["performance-cn", "performance-intl"])
+    prep.add_argument("--bilingual-docx", help="中英对照DOCX路径（海外演绎必须）")
+    prep.add_argument("--yes", "-y", action="store_true", help="跳过确认")
+    prep.set_defaults(handler=cmd_performance_prepare)
+
+
 if __name__ == "__main__":
     raise SystemExit(main())
+

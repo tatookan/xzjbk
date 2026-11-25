@@ -494,3 +494,141 @@ def validate_package(package: Path) -> dict:
     if int(metadata.get("previewVisibleCount", 0)) > len(metadata.get("preview", [])):
         raise ValidationError("发布包开放试读数量超过EP数量")
     return manifest
+
+
+# ===== 演绎剧本支持 =====
+
+def extract_docx_paragraphs(docx_path):
+    """从 DOCX 提取纯文本段落（只用标准库）"""
+    import zipfile as zf
+    with zf.ZipFile(docx_path) as archive:
+        xml = archive.read("word/document.xml").decode("utf-8")
+    paragraphs = []
+    for match in re.finditer(r"<w:p[ >].*?</w:p>", xml, re.DOTALL):
+        texts = re.findall(r"<w:t[^>]*>([^<]*)</w:t>", match.group(0))
+        line = "".join(texts).strip()
+        if line:
+            paragraphs.append(line)
+    return paragraphs
+
+
+def parse_performance_sections(paragraphs):
+    """解析演绎剧本的五大区结构"""
+    def find_section(prefix):
+        for i, line in enumerate(paragraphs):
+            if line.startswith(prefix):
+                return i
+        return None
+
+    sections = {}
+    markers = [
+        ("basic", "一、"),
+        ("characters", "二、"),
+        ("plot", "三、"),
+        ("outline", "四、"),
+        ("body", "五、"),
+    ]
+    positions = []
+    for key, prefix in markers:
+        pos = find_section(prefix)
+        positions.append((key, pos))
+    positions.sort(key=lambda x: x[1] if x[1] is not None else 999999)
+    for idx, (key, pos) in enumerate(positions):
+        if pos is None:
+            continue
+        next_pos = positions[idx + 1][1] if idx + 1 < len(positions) and positions[idx + 1][1] else len(paragraphs)
+        sections[key] = paragraphs[pos + 1 : next_pos]
+    return sections
+
+
+def extract_basic_info(basic_lines):
+    """从基本信息区提取元数据"""
+    info = {}
+    for line in basic_lines:
+        if line.startswith("剧名："):
+            info["title"] = line[3:]
+        elif line.startswith("类型："):
+            info["genre"] = line[3:].replace(" / ", "·")
+        elif "剧集数" in line:
+            match = re.search(r"(\d+)", line)
+            if match:
+                info["episodes"] = int(match.group(1))
+    # 简介
+    synopsis_start = None
+    for i, line in enumerate(basic_lines):
+        if line == "简介":
+            synopsis_start = i + 1
+            break
+    if synopsis_start:
+        info["synopsis"] = "\n".join(basic_lines[synopsis_start:])
+    return info
+
+
+def extract_characters(character_lines):
+    """从人物小传区提取角色列表"""
+    characters = []
+    current = None
+    for line in character_lines:
+        match = re.match(r"^(.{1,20})（(.{1,30})）$", line)
+        if match:
+            if current:
+                characters.append(current)
+            current = {"name": match.group(1), "label": match.group(2), "intro": []}
+        elif current and line.startswith("身份："):
+            current["role"] = line[3:]
+        elif current:
+            current["intro"].append(line)
+    if current:
+        characters.append(current)
+    return characters
+
+
+def extract_preview_lines(body_lines, max_episodes=3):
+    """从正文提取前 N 集的纯文本行"""
+    episodes = []
+    current_ep = None
+    current_lines = []
+    for line in body_lines:
+        match = re.match(r"^第(\d+)集$", line)
+        if match:
+            if current_ep is not None and current_ep <= max_episodes:
+                episodes.append({"ep": current_ep, "lines": current_lines})
+            current_ep = int(match.group(1))
+            current_lines = []
+        elif current_ep is not None and current_ep <= max_episodes:
+            current_lines.append(line)
+    if current_ep is not None and current_ep <= max_episodes:
+        episodes.append({"ep": current_ep, "lines": current_lines})
+    return episodes
+
+
+def build_performance_metadata(docx_path, package_mode):
+    """从演绎 DOCX 自动提取元数据"""
+    paragraphs = extract_docx_paragraphs(docx_path)
+    sections = parse_performance_sections(paragraphs)
+    if "basic" not in sections or "body" not in sections:
+        raise ValidationError("DOCX缺少基本信息或正文区域")
+
+    basic = extract_basic_info(sections.get("basic", []))
+    characters = extract_characters(sections.get("characters", []))
+    preview_lines = extract_preview_lines(sections.get("body", []))
+
+    if not basic.get("title"):
+        raise ValidationError("DOCX缺少剧名")
+    if not basic.get("episodes"):
+        raise ValidationError("DOCX缺少集数")
+    if not preview_lines:
+        raise ValidationError("DOCX正文中未找到可提取的试读集")
+
+    market = "domestic" if package_mode == "performance-cn" else "overseas"
+    return {
+        "packageMode": package_mode,
+        "market": market,
+        "title": basic["title"],
+        "genre": basic.get("genre", ""),
+        "episodes": basic["episodes"],
+        "synopsis": basic.get("synopsis", ""),
+        "presentationMode": "演绎",
+        "previewLines": preview_lines,
+        "characters": characters,
+    }
