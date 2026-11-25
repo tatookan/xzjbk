@@ -19,6 +19,7 @@ export interface DirectorSection {
 
 export interface DemoScript {
   id: string;
+  market?: 'overseas' | 'domestic';
   version: number;
   title: string;
   englishTitle: string;

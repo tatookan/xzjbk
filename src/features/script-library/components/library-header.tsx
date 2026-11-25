@@ -3,6 +3,7 @@
 import { Icons } from '@/components/icons';
 import { XinzhiBrand } from '@/components/xinzhi-brand';
 import { useScriptLibraryDemo } from '@/features/script-library/components/demo-context';
+import { useLibraryTheme } from '@/features/script-library/components/library-theme';
 import {
   HeartPointAmount,
   HeartPointMark
@@ -20,6 +21,7 @@ const links = [
 export function LibraryHeader() {
   const pathname = usePathname();
   const { role, authPending, currentUser, logout } = useScriptLibraryDemo();
+  const { mode, toggle } = useLibraryTheme();
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const accountMenuRef = useRef<HTMLDivElement>(null);
 
@@ -44,7 +46,7 @@ export function LibraryHeader() {
   }, [accountMenuOpen]);
 
   return (
-    <header className='sticky top-0 z-40 border-b border-white/10 bg-[#0d0e11]/88 text-[#f3efe7] backdrop-blur-xl'>
+    <header className='sticky top-0 z-40 border-b border-[var(--lib-border)] bg-[var(--lib-bg)]/88 text-[var(--lib-text)] backdrop-blur-xl'>
       <div className='mx-auto flex min-h-16 max-w-[1480px] items-center justify-between gap-4 px-5 sm:px-8 lg:px-12'>
         <div className='flex min-w-0 items-center gap-7'>
           <Link href='/' className='flex shrink-0 items-center gap-3' aria-label='返回新梦门户'>
@@ -81,6 +83,15 @@ export function LibraryHeader() {
               </Link>
             ) : null}
           </nav>
+          <button
+            type='button'
+            onClick={toggle}
+            aria-label={mode === 'dark' ? '切换到白天模式' : '切换到夜间模式'}
+            title={mode === 'dark' ? '切换到白天模式' : '切换到夜间模式'}
+            className='grid size-9 shrink-0 place-items-center border border-[var(--lib-border)] text-[var(--lib-text-dim)] transition-colors hover:text-[var(--lib-accent-text)]'
+          >
+            {mode === 'dark' ? <Icons.sun size={17} /> : <Icons.theme size={17} />}
+          </button>
         </div>
 
         <div className='flex shrink-0 items-center gap-3'>

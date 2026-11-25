@@ -4,5 +4,5 @@ import type { Metadata } from 'next';
 export const metadata: Metadata = { title: '剧本库 | 新梦' };
 
 export default function ScriptsPage() {
-  return <LibraryHome />;
+  return <LibraryHome market='overseas' />;
 }

@@ -39,6 +39,38 @@ a {
   -webkit-tap-highlight-color: transparent;
 }
 
+/* 剧本库白天/夜间主题变量（本地设计预览） */
+:root,
+[data-lib-mode='dark'] {
+  --lib-bg: #0d0e11;
+  --lib-bg-deep: #0a0b0d;
+  --lib-bg-soft: #0c0d10;
+  --lib-panel: #0e0f13;
+  --lib-panel-2: #14151b;
+  --lib-text: #f4f0e8;
+  --lib-text-dim: rgba(244, 240, 232, 0.6);
+  --lib-text-faint: rgba(244, 240, 232, 0.34);
+  --lib-border: rgba(255, 255, 255, 0.1);
+  --lib-accent: #d84a3f;
+  --lib-accent-text: #e46b60;
+  --lib-card-cover-bg: #191b20;
+}
+
+[data-lib-mode='light'] {
+  --lib-bg: #f5f1e8;
+  --lib-bg-deep: #efeae0;
+  --lib-bg-soft: #faf7f0;
+  --lib-panel: #ffffff;
+  --lib-panel-2: #f0ece4;
+  --lib-text: #17181c;
+  --lib-text-dim: rgba(23, 24, 28, 0.64);
+  --lib-text-faint: rgba(23, 24, 28, 0.42);
+  --lib-border: rgba(23, 24, 28, 0.14);
+  --lib-accent: #c43a30;
+  --lib-accent-text: #b83228;
+  --lib-card-cover-bg: #e6e1d6;
+}
+
 /* Xinzhi public portal */
 .portal-page {
   --portal-red: #d84a3f;
