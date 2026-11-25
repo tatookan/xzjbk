@@ -73,7 +73,7 @@ export function POST(request: Request) {
 
     const scriptId = createScriptId();
     try {
-      const assets = await prepareNewScriptAssets(scriptId, formData);
+      const assets = await prepareNewScriptAssets(scriptId, formData, input.packageMode);
       await createScript(scriptId, input, assets, principal.userId);
       await commitAgentImport(operation.id, scriptId, principal);
       return {

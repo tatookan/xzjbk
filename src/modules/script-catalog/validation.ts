@@ -17,7 +17,7 @@ const previewSchema = z
         .refine((value) => value.trim().length > 0, '英文试读不能为空')
     })
   )
-  .min(1, '至少填写一个试读单元')
+  .min(0)
   .max(80, '试读单元不能超过 80 个');
 
 const scriptInputSchema = z
@@ -38,9 +38,26 @@ const scriptInputSchema = z
     status: z.enum(['draft', 'available']),
     tags: z.array(z.string().trim().min(1).max(40)).max(20),
     preview: previewSchema,
+    market: z.enum(['domestic', 'overseas']).optional(),
+    previewLines: z.array(z.object({
+      ep: z.number().int().positive(),
+      lines: z.array(z.string().max(10_000)).max(500)
+    })).max(10).optional(),
+    characters: z.array(z.object({
+      name: z.string().trim().min(1).max(50),
+      label: z.string().trim().min(1).max(80),
+      role: z.string().trim().max(200).optional(),
+      intro: z.array(z.string().max(5_000)).max(20)
+    })).max(30).optional(),
     previewVisibleCount: z.coerce.number().int().positive().max(80)
   })
   .superRefine((value, context) => {
+    const isPerformance =
+      value.packageMode === 'performance-cn' || value.packageMode === 'performance-intl';
+    if (isPerformance) {
+      // 演绎模式：preview（中英对照段）不适用，previewLines 由 Agent/API 提供
+      if (value.preview.length === 0) return; // 跳过后续 preview 校验
+    }
     if (value.status === 'available' && value.price < 1) {
       context.addIssue({
         code: 'custom',
@@ -80,6 +97,11 @@ function parseJson(value: string, field: string): unknown {
 export function readCatalogScriptInput(formData: FormData): CatalogScriptInput {
   const preview = parseJson(stringField(formData, 'preview') || '[]', '试读内容');
   const fallbackVisibleCount = Array.isArray(preview) ? preview.length : 0;
+  const packageMode = stringField(formData, 'packageMode');
+  const isPerformance = packageMode === 'performance-cn' || packageMode === 'performance-intl';
+  const market = stringField(formData, 'market') || (packageMode === 'performance-cn' ? 'domestic' : 'overseas');
+  const previewLines = isPerformance ? parseJson(stringField(formData, 'previewLines') || '[]', '演绎试读') : undefined;
+  const characters = isPerformance ? parseJson(stringField(formData, 'characters') || '[]', '人物小传') : undefined;
   return scriptInputSchema.parse({
     title: stringField(formData, 'title'),
     englishTitle: stringField(formData, 'englishTitle'),
@@ -97,6 +119,9 @@ export function readCatalogScriptInput(formData: FormData): CatalogScriptInput {
     status: stringField(formData, 'status') || 'draft',
     tags: parseJson(stringField(formData, 'tags') || '[]', '标签'),
     preview,
+    market,
+    previewLines,
+    characters,
     previewVisibleCount:
       stringField(formData, 'previewVisibleCount') || String(fallbackVisibleCount)
   });
