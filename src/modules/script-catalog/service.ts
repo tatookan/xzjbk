@@ -228,6 +228,9 @@ function scriptRecord(input: CatalogScriptInput) {
     episodes: input.episodes,
     status: input.status,
     tags: input.tags,
+    market: input.market ?? 'overseas',
+    previewLines: input.previewLines ?? null,
+    characters: input.characters ?? null,
     publishedAt: input.status === 'available' ? new Date() : null,
     updatedAt: new Date()
   } as const;
@@ -255,29 +258,50 @@ export async function createScript(
         coverAssetId: cover.id,
         createdByUserId: actorUserId
       });
-      await transaction.insert(scriptFiles).values([
+      const fileRecords: {
+        scriptId: string;
+        kind: string;
+        assetId: string;
+        displayName: string;
+        sortOrder: number;
+      }[] = [
         {
           scriptId: id,
           kind: 'script',
           assetId: english.id,
           displayName: assets.english.stored.originalName,
           sortOrder: 0
-        },
-        {
+        }
+      ];
+      if (input.packageMode === 'performance-cn') {
+        // 国内演绎：只有 1 个 DOCX，不需要 secondary/director 文件记录
+      } else if (input.packageMode === 'performance-intl') {
+        fileRecords.push({
           scriptId: id,
-          kind: input.packageMode === 'parallel-production' ? 'chinese' : 'bilingual',
+          kind: 'bilingual',
           assetId: secondary.id,
           displayName: assets.secondary.stored.originalName,
           sortOrder: 1
-        },
-        {
-          scriptId: id,
-          kind: 'director-statement',
-          assetId: director.id,
-          displayName: assets.director.stored.originalName,
-          sortOrder: 2
-        }
-      ]);
+        });
+      } else {
+        fileRecords.push(
+          {
+            scriptId: id,
+            kind: input.packageMode === 'parallel-production' ? 'chinese' : 'bilingual',
+            assetId: secondary.id,
+            displayName: assets.secondary.stored.originalName,
+            sortOrder: 1
+          },
+          {
+            scriptId: id,
+            kind: 'director-statement',
+            assetId: director.id,
+            displayName: assets.director.stored.originalName,
+            sortOrder: 2
+          }
+        );
+      }
+      await transaction.insert(scriptFiles).values(fileRecords as typeof scriptFiles.$inferInsert[]);
       await transaction
         .insert(scriptPreviews)
         .values(input.preview.map((line, sequence) => ({ scriptId: id, sequence, ...line })));

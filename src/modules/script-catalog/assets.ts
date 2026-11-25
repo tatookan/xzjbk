@@ -99,12 +99,43 @@ export async function discardPreparedAssets(assets: PreparedCatalogAsset[]): Pro
 
 export async function prepareNewScriptAssets(
   scriptId: string,
-  formData: FormData
+  formData: FormData,
+  packageMode?: string
 ): Promise<PreparedScriptAssets> {
   const prepared: PreparedCatalogAsset[] = [];
   try {
     const cover = await prepareScriptCover(scriptId, readFileField(formData, 'cover', true)!);
     prepared.push(cover);
+
+    if (packageMode === 'performance-cn') {
+      // 国内演绎：1 个 DOCX
+      const english = await prepareScriptDocument(
+        scriptId,
+        'english',
+        readFileField(formData, 'english', true)!
+      );
+      prepared.push(english);
+      return { cover, english, secondary: english, director: english };
+    }
+
+    if (packageMode === 'performance-intl') {
+      // 海外演绎：英文 + 中英对照 2 个 DOCX
+      const english = await prepareScriptDocument(
+        scriptId,
+        'english',
+        readFileField(formData, 'english', true)!
+      );
+      prepared.push(english);
+      const secondary = await prepareScriptDocument(
+        scriptId,
+        'secondary',
+        readFileField(formData, 'secondary', true)!
+      );
+      prepared.push(secondary);
+      return { cover, english, secondary, director: english };
+    }
+
+    // 解说：英文 + 对照 + 导演阐述 3 个文件
     const english = await prepareScriptDocument(
       scriptId,
       'english',
