@@ -17,7 +17,7 @@ import { users } from './identity';
 
 export const scriptStatus = pgEnum('script_status', ['draft', 'available', 'sold', 'archived']);
 export const presentationMode = pgEnum('presentation_mode', ['narration', 'performance']);
-export const packageMode = pgEnum('package_mode', ['bilingual-package', 'parallel-production']);
+export const packageMode = pgEnum('package_mode', ['bilingual-package', 'parallel-production', 'performance-cn', 'performance-intl']);
 export const scriptFileKind = pgEnum('script_file_kind', [
   'script',
   'bilingual',
@@ -28,6 +28,18 @@ export const scriptFileKind = pgEnum('script_file_kind', [
 export interface DirectorSection {
   title: string;
   content: string;
+}
+
+export interface ScriptPreviewEpisode {
+  ep: number;
+  lines: string[];
+}
+
+export interface ScriptCharacter {
+  name: string;
+  label: string;
+  role?: string;
+  intro: string[];
 }
 
 export const scripts = pgTable(
@@ -61,6 +73,9 @@ export const scripts = pgTable(
     soldToUserId: text('sold_to_user_id').references(() => users.id, {
       onDelete: 'restrict'
     }),
+    market: text('market').notNull().default('overseas'),
+    previewLines: jsonb('preview_lines').$type<ScriptPreviewEpisode[]>(),
+    characters: jsonb('characters').$type<ScriptCharacter[]>(),
     soldAt: timestamp('sold_at', { withTimezone: true }),
     publishedAt: timestamp('published_at', { withTimezone: true }),
     createdByUserId: text('created_by_user_id')

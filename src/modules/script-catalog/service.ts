@@ -13,6 +13,7 @@ import {
 } from '@/infrastructure/database/schema';
 import { getStorageProvider } from '@/infrastructure/storage';
 import { AppError } from '@/shared/api/errors';
+import type { CatalogMarket, CatalogPackageMode } from './contracts';
 
 import type { PreparedCatalogAsset, PreparedScriptAssets } from './assets';
 import { discardPreparedAssets } from './assets';
@@ -31,16 +32,28 @@ function presentationValue(value: '解说' | '演绎'): 'narration' | 'performan
   return value === '解说' ? 'narration' : 'performance';
 }
 
-function packageFormat(value: 'bilingual-package' | 'parallel-production'): string {
-  return value === 'parallel-production'
-    ? 'Word / TXT / MD · 中文制作版 + English Production'
-    : 'Word / TXT / MD · 英文 + 中英对照';
+function packageFormat(value: CatalogPackageMode): string {
+  if (value === 'parallel-production') return 'Word / TXT / MD · 中文制作版 + English Production';
+  if (value === 'performance-cn') return 'DOCX · 中文演绎剧本';
+  if (value === 'performance-intl') return 'DOCX · 英文 + 中英对照演绎剧本';
+  return 'Word / TXT / MD · 英文 + 中英对照';
 }
 
-function emptyDeliverables(packageMode: 'bilingual-package' | 'parallel-production') {
-  return packageMode === 'parallel-production'
-    ? { script: '英文制作稿', chinese: '中文制作稿', directorStatement: '导演阐述' }
-    : { script: '英文剧本', bilingual: '中英对照剧本', directorStatement: '导演阐述' };
+function emptyDeliverables(packageMode: CatalogPackageMode) {
+  if (packageMode === 'parallel-production') {
+    return { script: '英文制作稿', chinese: '中文制作稿', directorStatement: '导演阐述' };
+  }
+  if (packageMode === 'performance-cn') {
+    return { script: '完整演绎剧本 DOCX', directorStatement: '导演阐述' };
+  }
+  if (packageMode === 'performance-intl') {
+    return {
+      script: '英文演绎剧本 DOCX',
+      bilingual: '中英对照剧本 DOCX',
+      directorStatement: '导演阐述'
+    };
+  }
+  return { script: '英文剧本', bilingual: '中英对照剧本', directorStatement: '导演阐述' };
 }
 
 function baseDto(row: ScriptRow): CatalogScriptDto {
@@ -63,6 +76,9 @@ function baseDto(row: ScriptRow): CatalogScriptDto {
     previewVisibleCount: 0,
     previewRationale: '',
     packageMode: row.script.packageMode,
+    market: (row.script.market as CatalogMarket) ?? 'overseas',
+    previewLines: row.script.previewLines ?? undefined,
+    characters: row.script.characters ?? undefined,
     presentationMode: presentationLabel(row.script.presentationMode),
     price: row.script.pricePoints,
     status,
@@ -110,7 +126,9 @@ async function hydrateDetail(row: ScriptRow, showOriginalFileNames: boolean) {
   dto.previewVisibleCount = row.script.previewVisibleCount;
   dto.previewRationale = row.script.previewRationale ?? '';
   dto.deliverables =
-    row.script.packageMode === 'parallel-production'
+    row.script.packageMode === 'parallel-production' ||
+    row.script.packageMode === 'performance-cn' ||
+    row.script.packageMode === 'performance-intl'
       ? {
           script: showOriginalFileNames ? (names.script ?? fallback.script) : fallback.script,
           chinese: showOriginalFileNames ? (names.chinese ?? fallback.chinese) : fallback.chinese,
@@ -131,9 +149,13 @@ async function hydrateDetail(row: ScriptRow, showOriginalFileNames: boolean) {
   return dto;
 }
 
-export async function listPublicScripts(): Promise<CatalogScriptDto[]> {
+export async function listPublicScripts(market?: CatalogMarket): Promise<CatalogScriptDto[]> {
+  const conditions = [inArray(scripts.status, ['available', 'sold']), isNull(mediaAssets.deletedAt)];
+  if (market) {
+    conditions.push(eq(scripts.market, market));
+  }
   const rows = await selectScriptRows()
-    .where(and(inArray(scripts.status, ['available', 'sold']), isNull(mediaAssets.deletedAt)))
+    .where(and(...conditions))
     .orderBy(desc(scripts.publishedAt), desc(scripts.createdAt));
   return rows.map(baseDto);
 }

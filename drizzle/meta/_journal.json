@@ -64,6 +64,13 @@
       "when": 1792829370279,
       "tag": "0008_user-soft-delete",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1795573180250,
+      "tag": "0009_market-performance-script",
+      "breakpoints": true
     }
   ]
 }

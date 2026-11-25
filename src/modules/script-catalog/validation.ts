@@ -32,7 +32,7 @@ const scriptInputSchema = z
     sourceUnitCount: z.coerce.number().int().positive().max(100_000),
     previewUnitLabel: z.enum(['段', '场']),
     presentationMode: z.enum(['解说', '演绎']),
-    packageMode: z.enum(['bilingual-package', 'parallel-production']),
+    packageMode: z.enum(['bilingual-package', 'parallel-production', 'performance-cn', 'performance-intl']),
     price: z.coerce.number().int().nonnegative().max(100_000_000),
     episodes: z.coerce.number().int().positive().max(100_000),
     status: z.enum(['draft', 'available']),

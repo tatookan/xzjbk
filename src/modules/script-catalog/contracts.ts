@@ -1,6 +1,23 @@
 export type CatalogScriptStatus = 'draft' | 'available' | 'sold';
-export type CatalogPackageMode = 'bilingual-package' | 'parallel-production';
+export type CatalogPackageMode =
+  | 'bilingual-package'
+  | 'parallel-production'
+  | 'performance-cn'
+  | 'performance-intl';
 export type CatalogPresentationMode = '解说' | '演绎';
+export type CatalogMarket = 'domestic' | 'overseas';
+
+export interface CatalogPreviewEpisode {
+  ep: number;
+  lines: string[];
+}
+
+export interface CatalogCharacter {
+  name: string;
+  label: string;
+  role?: string;
+  intro: string[];
+}
 
 export interface CatalogPreviewLine {
   zh: string;
@@ -25,6 +42,9 @@ export interface CatalogScriptDto {
   previewVisibleCount: number;
   previewRationale: string;
   packageMode: CatalogPackageMode;
+  market: CatalogMarket;
+  previewLines?: CatalogPreviewEpisode[];
+  characters?: CatalogCharacter[];
   presentationMode: CatalogPresentationMode;
   price: number;
   status: CatalogScriptStatus;
@@ -52,6 +72,9 @@ export interface CatalogScriptInput {
   previewUnitLabel: '段' | '场';
   presentationMode: CatalogPresentationMode;
   packageMode: CatalogPackageMode;
+  market?: CatalogMarket;
+  previewLines?: CatalogPreviewEpisode[];
+  characters?: CatalogCharacter[];
   price: number;
   episodes: number;
   status: 'draft' | 'available';
